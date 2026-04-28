@@ -33,7 +33,7 @@ class RoomControllerWebMvcTest {
     private val room = Room(RoomId(roomId), RoomName("Salle A"), RoomCapacity(10))
 
     @Test
-    fun `GET api-rooms retourne 200 avec la liste des salles`() {
+    fun `GET api-rooms returns 200 with the list of rooms`() {
         whenever(roomUseCase.findAll()).thenReturn(listOf(room))
 
         mockMvc.get("/api/rooms")
@@ -46,7 +46,7 @@ class RoomControllerWebMvcTest {
     }
 
     @Test
-    fun `GET api-rooms retourne 200 avec une liste vide`() {
+    fun `GET api-rooms returns 200 with an empty list`() {
         whenever(roomUseCase.findAll()).thenReturn(emptyList())
 
         mockMvc.get("/api/rooms")
@@ -58,7 +58,7 @@ class RoomControllerWebMvcTest {
     }
 
     @Test
-    fun `GET api-rooms-id retourne 200 avec la salle quand elle existe`() {
+    fun `GET api-rooms-id returns 200 with the room when it exists`() {
         whenever(roomUseCase.findById(RoomId(roomId))).thenReturn(room)
 
         mockMvc.get("/api/rooms/$roomId")
@@ -71,7 +71,7 @@ class RoomControllerWebMvcTest {
     }
 
     @Test
-    fun `GET api-rooms-id retourne 404 quand la salle n'existe pas`() {
+    fun `GET api-rooms-id returns 404 when the room does not exist`() {
         whenever(roomUseCase.findById(RoomId(roomId))).thenReturn(null)
 
         mockMvc.get("/api/rooms/$roomId")
@@ -81,7 +81,7 @@ class RoomControllerWebMvcTest {
     }
 
     @Test
-    fun `POST api-rooms retourne 201 avec la salle créée`() {
+    fun `POST api-rooms returns 201 with the created room`() {
         val request = CreateRoomRequest("Salle B", 20)
         val createdRoom = Room(RoomId(roomId), RoomName("Salle B"), RoomCapacity(20))
         whenever(roomUseCase.save(any())).thenReturn(createdRoom)
@@ -98,7 +98,7 @@ class RoomControllerWebMvcTest {
     }
 
     @Test
-    fun `POST api-rooms appelle le use case avec les valeurs du body`() {
+    fun `POST api-rooms calls the use case with the request body values`() {
         val request = CreateRoomRequest("Salle C", 30)
         whenever(roomUseCase.save(any())).thenReturn(
             Room(RoomId(roomId), RoomName("Salle C"), RoomCapacity(30))

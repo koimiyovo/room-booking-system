@@ -75,3 +75,4 @@ Three test layers, each in its own module:
   web slice.
 - Integration tests use `@BeforeEach roomJpaRepository.deleteAll()` for isolation.
 - `mockito-kotlin` (v5.4.0) is used for mocking in domain and web tests.
+- Test names (backtick strings in Kotlin) must be written in English.

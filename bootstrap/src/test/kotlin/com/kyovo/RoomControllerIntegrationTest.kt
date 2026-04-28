@@ -34,7 +34,7 @@ class RoomControllerIntegrationTest {
     }
 
     @Test
-    fun `GET api-rooms retourne 200 avec liste vide si aucune salle`() {
+    fun `GET api-rooms returns 200 with empty list when no rooms exist`() {
         mockMvc.get("/api/rooms")
             .andExpect {
                 status { isOk() }
@@ -43,7 +43,7 @@ class RoomControllerIntegrationTest {
     }
 
     @Test
-    fun `POST api-rooms retourne 201 avec la salle créée`() {
+    fun `POST api-rooms returns 201 with the created room`() {
         mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Conférence", 25))
@@ -56,7 +56,7 @@ class RoomControllerIntegrationTest {
     }
 
     @Test
-    fun `POST puis GET api-rooms retourne la salle créée dans la liste`() {
+    fun `POST then GET api-rooms returns the created room in the list`() {
         val postResult = mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Réunion", 12))
@@ -76,7 +76,7 @@ class RoomControllerIntegrationTest {
     }
 
     @Test
-    fun `POST puis GET api-rooms-id retourne la salle par son identifiant`() {
+    fun `POST then GET api-rooms-id returns the room by its identifier`() {
         val postResult = mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Formation", 30))
@@ -94,7 +94,7 @@ class RoomControllerIntegrationTest {
     }
 
     @Test
-    fun `GET api-rooms-id retourne 404 pour un identifiant inexistant`() {
+    fun `GET api-rooms-id returns 404 for a non-existent identifier`() {
         mockMvc.get("/api/rooms/${UUID.randomUUID()}")
             .andExpect {
                 status { isNotFound() }
