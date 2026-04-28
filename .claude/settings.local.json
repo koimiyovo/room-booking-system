@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn clean *)",
+      "Bash(grep -E \"\\\\.\\(kt|java\\)$\")",
+      "Bash(mvn test *)",
+      "Bash(java -version)",
+      "Bash(where java *)",
+      "Bash(dir \"C:\\\\Program Files\\\\Java\")",
+      "Bash(dir \"C:\\\\Program Files\\\\Eclipse Adoptium\")",
+      "Bash(dir \"C:\\\\Program Files\\\\Microsoft\")",
+      "Bash(dir \"C:\\\\Program Files\\\\Amazon Corretto\")",
+      "Bash(dir \"C:\\\\Users\\\\bonbo\\\\.jdks\")",
+      "Bash(dir \"C:\\\\Users\\\\bonbo\\\\.gradle\\\\jdks\")"
+    ]
+  }
+}
