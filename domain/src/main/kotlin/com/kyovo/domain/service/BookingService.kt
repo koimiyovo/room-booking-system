@@ -9,10 +9,12 @@ import com.kyovo.domain.model.NewBooking
 import com.kyovo.domain.port.primary.BookingUseCase
 import com.kyovo.domain.port.secondary.BookingRepository
 import com.kyovo.domain.port.secondary.RoomRepository
+import com.kyovo.domain.port.secondary.TransactionPort
 
 class BookingService(
     private val bookingRepository: BookingRepository,
-    private val roomRepository: RoomRepository
+    private val roomRepository: RoomRepository,
+    private val transactionPort: TransactionPort
 ) : BookingUseCase
 {
     override fun findAll(): List<Booking>
@@ -27,15 +29,17 @@ class BookingService(
 
     override fun create(newBooking: NewBooking): Booking
     {
-        val room = roomRepository.findById(newBooking.roomId)
-            ?: throw RoomNotFoundException(newBooking.roomId)
+        return transactionPort.executeInTransaction {
+            val room = roomRepository.findByIdForBooking(newBooking.roomId)
+                ?: throw RoomNotFoundException(newBooking.roomId)
 
-        if (newBooking.numberOfPeople.value > room.capacity.value)
-            throw RoomCapacityExceededException(newBooking.numberOfPeople, room.capacity)
+            if (newBooking.numberOfPeople.value > room.capacity.value)
+                throw RoomCapacityExceededException(newBooking.numberOfPeople, room.capacity)
 
-        if (bookingRepository.existsOverlappingBooking(newBooking.roomId, newBooking.startDate, newBooking.endDate))
-            throw BookingConflictException(newBooking.roomId, newBooking.startDate, newBooking.endDate)
+            if (bookingRepository.existsOverlappingBooking(newBooking.roomId, newBooking.startDate, newBooking.endDate))
+                throw BookingConflictException(newBooking.roomId, newBooking.startDate, newBooking.endDate)
 
-        return bookingRepository.save(newBooking.toBooking())
+            bookingRepository.save(newBooking.toBooking())
+        }
     }
 }

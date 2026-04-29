@@ -6,6 +6,7 @@ import com.kyovo.domain.exception.RoomNotFoundException
 import com.kyovo.domain.model.*
 import com.kyovo.domain.port.secondary.BookingRepository
 import com.kyovo.domain.port.secondary.RoomRepository
+import com.kyovo.domain.port.secondary.TransactionPort
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -13,13 +14,21 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.time.LocalDate
-import java.util.UUID
+import java.util.*
 
-class BookingServiceTest {
+class BookingServiceTest
+{
 
     private val bookingRepository: BookingRepository = mock()
     private val roomRepository: RoomRepository = mock()
-    private val bookingService = BookingService(bookingRepository, roomRepository)
+    private val transactionPort = object : TransactionPort
+    {
+        override fun <T> executeInTransaction(block: () -> T): T
+        {
+            return block()
+        }
+    }
+    private val bookingService = BookingService(bookingRepository, roomRepository, transactionPort)
 
     private val roomId = RoomId(UUID.randomUUID())
     private val userId = UserId(UUID.randomUUID())
@@ -29,8 +38,9 @@ class BookingServiceTest {
     private val newBooking = NewBooking(roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)
 
     @Test
-    fun `create returns booking when room exists and no conflict`() {
-        whenever(roomRepository.findById(roomId)).thenReturn(room)
+    fun `create returns booking when room exists and no conflict`()
+    {
+        whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(room)
         whenever(bookingRepository.existsOverlappingBooking(roomId, startDate, endDate)).thenReturn(false)
         whenever(bookingRepository.save(any())).thenAnswer { it.getArgument<Booking>(0) }
 
@@ -45,25 +55,28 @@ class BookingServiceTest {
     }
 
     @Test
-    fun `create throws RoomNotFoundException when room does not exist`() {
-        whenever(roomRepository.findById(roomId)).thenReturn(null)
+    fun `create throws RoomNotFoundException when room does not exist`()
+    {
+        whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(null)
 
         assertThatThrownBy { bookingService.create(newBooking) }
             .isInstanceOf(RoomNotFoundException::class.java)
     }
 
     @Test
-    fun `create throws RoomCapacityExceededException when number of people exceeds room capacity`() {
+    fun `create throws RoomCapacityExceededException when number of people exceeds room capacity`()
+    {
         val oversizedBooking = newBooking.copy(numberOfPeople = BookingNumberOfPeople(15))
-        whenever(roomRepository.findById(roomId)).thenReturn(room)
+        whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(room)
 
         assertThatThrownBy { bookingService.create(oversizedBooking) }
             .isInstanceOf(RoomCapacityExceededException::class.java)
     }
 
     @Test
-    fun `create throws BookingConflictException when room is already booked for the period`() {
-        whenever(roomRepository.findById(roomId)).thenReturn(room)
+    fun `create throws BookingConflictException when room is already booked for the period`()
+    {
+        whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(room)
         whenever(bookingRepository.existsOverlappingBooking(roomId, startDate, endDate)).thenReturn(true)
 
         assertThatThrownBy { bookingService.create(newBooking) }
@@ -71,8 +84,10 @@ class BookingServiceTest {
     }
 
     @Test
-    fun `findAll returns all bookings`() {
-        val booking = Booking(BookingId(UUID.randomUUID()), roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)
+    fun `findAll returns all bookings`()
+    {
+        val booking =
+            Booking(BookingId(UUID.randomUUID()), roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)
         whenever(bookingRepository.findAll()).thenReturn(listOf(booking))
 
         val result = bookingService.findAll()
@@ -81,7 +96,8 @@ class BookingServiceTest {
     }
 
     @Test
-    fun `findAll returns empty list when no bookings exist`() {
+    fun `findAll returns empty list when no bookings exist`()
+    {
         whenever(bookingRepository.findAll()).thenReturn(emptyList())
 
         val result = bookingService.findAll()
@@ -90,7 +106,8 @@ class BookingServiceTest {
     }
 
     @Test
-    fun `findById returns booking when it exists`() {
+    fun `findById returns booking when it exists`()
+    {
         val bookingId = BookingId(UUID.randomUUID())
         val booking = Booking(bookingId, roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)
         whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
@@ -101,7 +118,8 @@ class BookingServiceTest {
     }
 
     @Test
-    fun `findById returns null when booking does not exist`() {
+    fun `findById returns null when booking does not exist`()
+    {
         val bookingId = BookingId(UUID.randomUUID())
         whenever(bookingRepository.findById(bookingId)).thenReturn(null)
 

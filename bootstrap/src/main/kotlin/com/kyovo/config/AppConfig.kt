@@ -2,6 +2,7 @@ package com.kyovo.config
 
 import com.kyovo.domain.port.secondary.BookingRepository
 import com.kyovo.domain.port.secondary.RoomRepository
+import com.kyovo.domain.port.secondary.TransactionPort
 import com.kyovo.domain.port.secondary.UserRepository
 import com.kyovo.domain.service.BookingService
 import com.kyovo.domain.service.RoomService
@@ -25,8 +26,12 @@ class AppConfig
     }
 
     @Bean
-    fun bookingUseCase(bookingRepository: BookingRepository, roomRepository: RoomRepository): BookingService
+    fun bookingUseCase(
+        bookingRepository: BookingRepository,
+        roomRepository: RoomRepository,
+        transactionPort: TransactionPort
+    ): BookingService
     {
-        return BookingService(bookingRepository, roomRepository)
+        return BookingService(bookingRepository, roomRepository, transactionPort)
     }
 }
