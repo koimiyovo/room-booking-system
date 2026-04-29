@@ -2,7 +2,8 @@ package com.kyovo.adapter.persistence.adapter
 
 import com.kyovo.adapter.persistence.entity.RoomEntity
 import com.kyovo.adapter.persistence.repository.RoomJpaRepository
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.Room
+import com.kyovo.domain.model.RoomId
 import com.kyovo.domain.port.secondary.RoomRepository
 import org.springframework.stereotype.Component
 
@@ -17,6 +18,11 @@ class RoomPersistenceAdapter(private val jpaRepository: RoomJpaRepository) : Roo
     override fun findById(id: RoomId): Room?
     {
         return jpaRepository.findById(id.value).orElse(null)?.toDomain()
+    }
+
+    override fun findByIdForBooking(id: RoomId): Room?
+    {
+        return jpaRepository.findByIdForBooking(id.value)?.toDomain()
     }
 
     override fun save(room: Room): Room
