@@ -14,7 +14,7 @@ class OpenApiConfig
         .info(
             Info()
                 .title("Room Booking System API")
-                .description("API de gestion des réservations de salles")
+                .description("API for managing room bookings")
                 .version("1.0.0")
                 .contact(Contact().name("Koimi Yovo").email("yovoedem33@gmail.com"))
         )

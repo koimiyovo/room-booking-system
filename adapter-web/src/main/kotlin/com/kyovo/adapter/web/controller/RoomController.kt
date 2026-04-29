@@ -17,23 +17,23 @@ import java.util.*
 
 @RestController
 @RequestMapping("/api/rooms")
-@Tag(name = "Rooms", description = "Gestion des salles")
+@Tag(name = "Rooms", description = "Room management")
 class RoomController(private val roomUseCase: RoomUseCase) {
     @GetMapping
-    @Operation(summary = "Lister toutes les salles")
-    @ApiResponse(responseCode = "200", description = "Liste des salles retournée avec succès")
+    @Operation(summary = "List all rooms")
+    @ApiResponse(responseCode = "200", description = "Room list returned successfully")
     fun findAll(): List<Room> {
         return roomUseCase.findAll()
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Récupérer une salle par son identifiant")
+    @Operation(summary = "Get a room by its identifier")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Salle trouvée"),
-        ApiResponse(responseCode = "404", description = "Salle introuvable")
+        ApiResponse(responseCode = "200", description = "Room found"),
+        ApiResponse(responseCode = "404", description = "Room not found")
     )
     fun findById(
-        @Parameter(description = "Identifiant UUID de la salle")
+        @Parameter(description = "UUID identifier of the room")
         @PathVariable id: UUID
     ): ResponseEntity<Room> {
         return roomUseCase.findById(RoomId(id))
@@ -42,8 +42,8 @@ class RoomController(private val roomUseCase: RoomUseCase) {
     }
 
     @PostMapping
-    @Operation(summary = "Créer une nouvelle salle")
-    @ApiResponse(responseCode = "201", description = "Salle créée avec succès")
+    @Operation(summary = "Create a new room")
+    @ApiResponse(responseCode = "201", description = "Room created successfully")
     fun create(@RequestBody request: CreateRoomRequest): ResponseEntity<CreateRoomResponse> {
         val room = roomUseCase.save(request.toNewRoom())
         val response = CreateRoomResponse(
