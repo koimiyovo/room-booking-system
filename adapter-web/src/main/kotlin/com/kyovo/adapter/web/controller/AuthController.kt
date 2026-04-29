@@ -1,18 +1,26 @@
 package com.kyovo.adapter.web.controller
 
-import com.kyovo.adapter.web.dto.*
+import com.kyovo.adapter.web.dto.LoginRequest
+import com.kyovo.adapter.web.dto.LoginResponse
+import com.kyovo.adapter.web.dto.RegisterRequest
+import com.kyovo.adapter.web.dto.UserResponse
 import com.kyovo.adapter.web.security.JwtService
-import com.kyovo.domain.model.UserEmail
+import com.kyovo.adapter.web.security.TokenBlacklistService
 import com.kyovo.domain.exception.InvalidCredentialsException
+import com.kyovo.domain.model.UserEmail
 import com.kyovo.domain.port.primary.UserUseCase
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/auth")
@@ -20,7 +28,8 @@ import org.springframework.web.bind.annotation.*
 class AuthController(
     private val userUseCase: UserUseCase,
     private val passwordHashPort: PasswordHashPort,
-    private val jwtService: JwtService
+    private val jwtService: JwtService,
+    private val tokenBlacklistService: TokenBlacklistService
 )
 {
     @PostMapping("/register")
@@ -48,5 +57,27 @@ class AuthController(
         if (!passwordHashPort.matches(request.password, user.password)) throw InvalidCredentialsException()
         val token = jwtService.generateToken(user.id, user.role)
         return ResponseEntity.ok(LoginResponse(token))
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Log out and revoke the JWT token")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Logout successful"),
+        ApiResponse(responseCode = "401", description = "Invalid or missing token")
+    )
+    fun logout(request: HttpServletRequest): ResponseEntity<Void>
+    {
+        val authHeader = request.getHeader("Authorization")
+        if (authHeader != null && authHeader.startsWith("Bearer "))
+        {
+            val token = authHeader.substring(7)
+            val expirationTime = jwtService.extractExpirationTime(token)
+            if (expirationTime != null && jwtService.validateToken(token))
+            {
+                tokenBlacklistService.revokeToken(token, expirationTime)
+                return ResponseEntity.ok().build()
+            }
+        }
+        throw InvalidCredentialsException()
     }
 }

@@ -23,7 +23,7 @@ class JwtService(
     {
         return Jwts.builder()
             .subject(userId.value.toString())
-            .claim("role", role.name)
+            .claim("role", role.label)
             .issuedAt(Date())
             .expiration(Date(System.currentTimeMillis() + expirationMs))
             .signWith(key)
@@ -45,11 +45,19 @@ class JwtService(
         return parseClaims(token) != null
     }
 
+    fun extractExpirationTime(token: String): Long?
+    {
+        return parseClaims(token)?.expiration?.time
+    }
+
     private fun parseClaims(token: String): Claims?
     {
-        return try {
+        return try
+        {
             Jwts.parser().verifyWith(key).build().parseSignedClaims(token).payload
-        } catch (e: Exception) {
+        }
+        catch (e: Exception)
+        {
             null
         }
     }

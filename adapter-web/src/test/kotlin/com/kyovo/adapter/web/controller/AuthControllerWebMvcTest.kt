@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.kyovo.adapter.web.dto.LoginRequest
 import com.kyovo.adapter.web.dto.RegisterRequest
 import com.kyovo.adapter.web.security.JwtService
+import com.kyovo.adapter.web.security.TokenBlacklistService
 import com.kyovo.domain.exception.EmailAlreadyUsedException
 import com.kyovo.domain.model.*
 import com.kyovo.domain.port.primary.UserUseCase
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -39,6 +41,9 @@ class AuthControllerWebMvcTest
 
     @MockitoBean
     private lateinit var jwtService: JwtService
+
+    @MockitoBean
+    private lateinit var tokenBlacklistService: TokenBlacklistService
 
     private val userId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
     private val savedUser =
@@ -115,6 +120,55 @@ class AuthControllerWebMvcTest
         mockMvc.post("/api/auth/login") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(LoginRequest("alice@example.com", "wrong"))
+            with(csrf())
+        }.andExpect {
+            status { isUnauthorized() }
+        }
+    }
+
+    @Test
+    @WithMockUser
+    fun `POST api-auth-logout returns 200 and revokes the token`()
+    {
+        val token = "valid-jwt-token"
+        val expirationTime = System.currentTimeMillis() + 3600000
+
+        whenever(jwtService.extractExpirationTime(token)).thenReturn(expirationTime)
+        whenever(jwtService.validateToken(token)).thenReturn(true)
+
+        mockMvc.post("/api/auth/logout") {
+            contentType = MediaType.APPLICATION_JSON
+            header("Authorization", "Bearer $token")
+            with(csrf())
+        }.andExpect {
+            status { isOk() }
+        }
+
+        verify(tokenBlacklistService).revokeToken(token, expirationTime)
+    }
+
+    @Test
+    fun `POST api-auth-logout returns 401 when token is missing`()
+    {
+        mockMvc.post("/api/auth/logout") {
+            contentType = MediaType.APPLICATION_JSON
+            with(csrf())
+        }.andExpect {
+            status { isUnauthorized() }
+        }
+    }
+
+    @Test
+    fun `POST api-auth-logout returns 401 when token is invalid`()
+    {
+        val token = "invalid-jwt-token"
+
+        whenever(jwtService.extractExpirationTime(token)).thenReturn(null)
+        whenever(jwtService.validateToken(token)).thenReturn(false)
+
+        mockMvc.post("/api/auth/logout") {
+            contentType = MediaType.APPLICATION_JSON
+            header("Authorization", "Bearer $token")
             with(csrf())
         }.andExpect {
             status { isUnauthorized() }

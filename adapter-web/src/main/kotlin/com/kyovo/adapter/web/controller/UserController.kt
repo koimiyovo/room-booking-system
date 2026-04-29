@@ -3,6 +3,7 @@ package com.kyovo.adapter.web.controller
 import com.kyovo.adapter.web.dto.UpdateUserRequest
 import com.kyovo.adapter.web.dto.UserResponse
 import com.kyovo.domain.model.UserId
+import com.kyovo.domain.model.UserRole.ADMIN
 import com.kyovo.domain.port.primary.UserUseCase
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -84,7 +85,7 @@ class UserController(private val userUseCase: UserUseCase)
 
     private fun isAdminOrOwner(authentication: Authentication, targetId: UserId): Boolean
     {
-        if (authentication.authorities.any { it.authority == "ROLE_ADMIN" }) return true
+        if (authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }) return true
         return UserId(UUID.fromString(authentication.name)) == targetId
     }
 }

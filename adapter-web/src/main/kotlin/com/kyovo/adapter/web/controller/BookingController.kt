@@ -7,6 +7,7 @@ import com.kyovo.adapter.web.dto.CreateBookingResponse
 import com.kyovo.domain.model.BookingCancellationReason
 import com.kyovo.domain.model.BookingId
 import com.kyovo.domain.model.UserId
+import com.kyovo.domain.model.UserRole.ADMIN
 import com.kyovo.domain.port.primary.BookingUseCase
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -55,7 +56,7 @@ class BookingController(private val bookingUseCase: BookingUseCase)
     ): ResponseEntity<BookingResponse>
     {
         val booking = bookingUseCase.findById(BookingId(id)) ?: return ResponseEntity.notFound().build()
-        val isAdmin = authentication.authorities.any { it.authority == "ROLE_ADMIN" }
+        val isAdmin = authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }
         val requestingUserId = UserId(UUID.fromString(authentication.name))
         if (!isAdmin && booking.userId != requestingUserId) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         return ResponseEntity.ok(BookingResponse.fromDomain(booking))
@@ -99,7 +100,7 @@ class BookingController(private val bookingUseCase: BookingUseCase)
     ): ResponseEntity<BookingResponse>
     {
         val bookingId = BookingId(id)
-        val isAdmin = authentication.authorities.any { it.authority == "ROLE_ADMIN" }
+        val isAdmin = authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }
         val cancelledByUserId = UserId(UUID.fromString(authentication.name))
         val reason = request?.reason?.let { BookingCancellationReason(it) }
         val booking = bookingUseCase.cancel(bookingId, cancelledByUserId, isAdmin, reason)
