@@ -1,33 +1,38 @@
 package com.kyovo.domain.service
 
+import com.kyovo.domain.exception.EmailAlreadyUsedException
+import com.kyovo.domain.exception.UserNotFoundException
 import com.kyovo.domain.model.*
+import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.UserRepository
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import org.mockito.kotlin.*
 import java.util.UUID
 
-class UserServiceTest {
-
+class UserServiceTest
+{
     private val userRepository: UserRepository = mock()
-    private val userService = UserService(userRepository)
+    private val passwordHashPort: PasswordHashPort = mock()
+    private val userService = UserService(userRepository, passwordHashPort)
+
+    private val userId = UserId(UUID.randomUUID())
+    private val existingUser = User(userId, UserName("Alice"), UserEmail("alice@example.com"), UserPassword("hashed"), UserRole.USER)
 
     @Test
-    fun `findAll returns all users from the repository`() {
-        val users = listOf(User(UserId(UUID.randomUUID()), UserName("Alice"), UserEmail("alice@example.com")))
-        whenever(userRepository.findAll()).thenReturn(users)
+    fun `findAll returns all users from the repository`()
+    {
+        whenever(userRepository.findAll()).thenReturn(listOf(existingUser))
 
         val result = userService.findAll()
 
-        assertThat(result).isEqualTo(users)
+        assertThat(result).isEqualTo(listOf(existingUser))
     }
 
     @Test
-    fun `findAll returns an empty list when no users exist`() {
+    fun `findAll returns an empty list when no users exist`()
+    {
         whenever(userRepository.findAll()).thenReturn(emptyList())
 
         val result = userService.findAll()
@@ -36,49 +41,126 @@ class UserServiceTest {
     }
 
     @Test
-    fun `findById returns the user when it exists`() {
-        val id = UserId(UUID.randomUUID())
-        val user = User(id, UserName("Bob"), UserEmail("bob@example.com"))
-        whenever(userRepository.findById(id)).thenReturn(user)
+    fun `findById returns the user when it exists`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
 
-        val result = userService.findById(id)
+        val result = userService.findById(userId)
 
-        assertThat(result).isEqualTo(user)
+        assertThat(result).isEqualTo(existingUser)
     }
 
     @Test
-    fun `findById returns null when the user does not exist`() {
-        val id = UserId(UUID.randomUUID())
-        whenever(userRepository.findById(id)).thenReturn(null)
+    fun `findById returns null when the user does not exist`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(null)
 
-        val result = userService.findById(id)
+        val result = userService.findById(userId)
 
         assertThat(result).isNull()
     }
 
     @Test
-    fun `save persists the user with a generated new identifier`() {
-        val newUser = NewUser(UserName("Charlie"), UserEmail("charlie@example.com"))
+    fun `findByEmail returns the user when it exists`()
+    {
+        val email = UserEmail("alice@example.com")
+        whenever(userRepository.findByEmail(email)).thenReturn(existingUser)
+
+        val result = userService.findByEmail(email)
+
+        assertThat(result).isEqualTo(existingUser)
+    }
+
+    @Test
+    fun `save hashes the password before persisting`()
+    {
+        val newUser = NewUser(UserName("Charlie"), UserEmail("charlie@example.com"), UserPassword("raw"))
         val captor = argumentCaptor<User>()
+        whenever(userRepository.findByEmail(newUser.email)).thenReturn(null)
+        whenever(passwordHashPort.hash("raw")).thenReturn(UserPassword("hashed"))
         whenever(userRepository.save(any())).thenAnswer { it.getArgument<User>(0) }
 
         userService.save(newUser)
 
         verify(userRepository).save(captor.capture())
-        val captured = captor.firstValue
-        assertThat(captured.name).isEqualTo(newUser.name)
-        assertThat(captured.email).isEqualTo(newUser.email)
-        assertThat(captured.id.value).isNotNull()
+        assertThat(captor.firstValue.password).isEqualTo(UserPassword("hashed"))
     }
 
     @Test
-    fun `save returns the user persisted by the repository`() {
-        val newUser = NewUser(UserName("Diana"), UserEmail("diana@example.com"))
-        val savedUser = User(UserId(UUID.randomUUID()), UserName("Diana"), UserEmail("diana@example.com"))
-        whenever(userRepository.save(any())).thenReturn(savedUser)
+    fun `save returns the user persisted by the repository`()
+    {
+        val newUser = NewUser(UserName("Diana"), UserEmail("diana@example.com"), UserPassword("raw"))
+        whenever(userRepository.findByEmail(newUser.email)).thenReturn(null)
+        whenever(passwordHashPort.hash("raw")).thenReturn(UserPassword("hashed"))
+        whenever(userRepository.save(any())).thenReturn(existingUser)
 
         val result = userService.save(newUser)
 
-        assertThat(result).isEqualTo(savedUser)
+        assertThat(result).isEqualTo(existingUser)
+    }
+
+    @Test
+    fun `save throws EmailAlreadyUsedException when email is taken`()
+    {
+        val newUser = NewUser(UserName("Dup"), UserEmail("alice@example.com"), UserPassword("raw"))
+        whenever(userRepository.findByEmail(newUser.email)).thenReturn(existingUser)
+
+        assertThatThrownBy { userService.save(newUser) }
+            .isInstanceOf(EmailAlreadyUsedException::class.java)
+    }
+
+    @Test
+    fun `update changes name and email when both are provided`()
+    {
+        val data = UpdateUser(UserName("New Name"), UserEmail("new@example.com"), null)
+        val newEmail = UserEmail("new@example.com")
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
+        whenever(userRepository.findByEmail(newEmail)).thenReturn(null)
+        whenever(userRepository.save(any())).thenAnswer { it.getArgument<User>(0) }
+
+        val result = userService.update(userId, data)
+
+        assertThat(result.name).isEqualTo(UserName("New Name"))
+        assertThat(result.email).isEqualTo(UserEmail("new@example.com"))
+    }
+
+    @Test
+    fun `update throws UserNotFoundException when user does not exist`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(null)
+
+        assertThatThrownBy { userService.update(userId, UpdateUser(null, null, null)) }
+            .isInstanceOf(UserNotFoundException::class.java)
+    }
+
+    @Test
+    fun `update throws EmailAlreadyUsedException when new email is taken by another user`()
+    {
+        val otherUser = existingUser.copy(id = UserId(UUID.randomUUID()), email = UserEmail("taken@example.com"))
+        val data = UpdateUser(null, UserEmail("taken@example.com"), null)
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
+        whenever(userRepository.findByEmail(UserEmail("taken@example.com"))).thenReturn(otherUser)
+
+        assertThatThrownBy { userService.update(userId, data) }
+            .isInstanceOf(EmailAlreadyUsedException::class.java)
+    }
+
+    @Test
+    fun `delete removes the user when it exists`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
+
+        userService.delete(userId)
+
+        verify(userRepository).deleteById(userId)
+    }
+
+    @Test
+    fun `delete throws UserNotFoundException when user does not exist`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(null)
+
+        assertThatThrownBy { userService.delete(userId) }
+            .isInstanceOf(UserNotFoundException::class.java)
     }
 }

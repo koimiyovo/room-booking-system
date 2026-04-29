@@ -1,6 +1,7 @@
 package com.kyovo.config
 
 import com.kyovo.domain.port.secondary.BookingRepository
+import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.RoomRepository
 import com.kyovo.domain.port.secondary.TransactionPort
 import com.kyovo.domain.port.secondary.UserRepository
@@ -20,9 +21,9 @@ class AppConfig
     }
 
     @Bean
-    fun userUseCase(userRepository: UserRepository): UserService
+    fun userUseCase(userRepository: UserRepository, passwordHashPort: PasswordHashPort): UserService
     {
-        return UserService(userRepository)
+        return UserService(userRepository, passwordHashPort)
     }
 
     @Bean

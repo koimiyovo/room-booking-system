@@ -1,8 +1,6 @@
 package com.kyovo.adapter.web.controller
 
-import com.kyovo.domain.exception.BookingConflictException
-import com.kyovo.domain.exception.RoomCapacityExceededException
-import com.kyovo.domain.exception.RoomNotFoundException
+import com.kyovo.domain.exception.*
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -25,6 +23,42 @@ class GlobalExceptionHandler
 
     @ExceptionHandler(BookingConflictException::class)
     fun handleBookingConflict(ex: BookingConflictException): ResponseEntity<String>
+    {
+        return ResponseEntity(ex.message, HttpStatus.CONFLICT)
+    }
+
+    @ExceptionHandler(UserNotFoundException::class)
+    fun handleUserNotFound(ex: UserNotFoundException): ResponseEntity<String>
+    {
+        return ResponseEntity(ex.message, HttpStatus.NOT_FOUND)
+    }
+
+    @ExceptionHandler(EmailAlreadyUsedException::class)
+    fun handleEmailAlreadyUsed(ex: EmailAlreadyUsedException): ResponseEntity<String>
+    {
+        return ResponseEntity(ex.message, HttpStatus.CONFLICT)
+    }
+
+    @ExceptionHandler(InvalidCredentialsException::class)
+    fun handleInvalidCredentials(ex: InvalidCredentialsException): ResponseEntity<String>
+    {
+        return ResponseEntity(ex.message, HttpStatus.UNAUTHORIZED)
+    }
+
+    @ExceptionHandler(BookingNotFoundException::class)
+    fun handleBookingNotFound(ex: BookingNotFoundException): ResponseEntity<String>
+    {
+        return ResponseEntity(ex.message, HttpStatus.NOT_FOUND)
+    }
+
+    @ExceptionHandler(BookingNotOwnedByUserException::class)
+    fun handleBookingNotOwned(ex: BookingNotOwnedByUserException): ResponseEntity<String>
+    {
+        return ResponseEntity(ex.message, HttpStatus.FORBIDDEN)
+    }
+
+    @ExceptionHandler(BookingAlreadyCancelledException::class)
+    fun handleBookingAlreadyCancelled(ex: BookingAlreadyCancelledException): ResponseEntity<String>
     {
         return ResponseEntity(ex.message, HttpStatus.CONFLICT)
     }

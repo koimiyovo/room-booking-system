@@ -30,7 +30,16 @@ class BookingEntity(
     val numberOfPeople: Int,
 
     @Column(nullable = true)
-    val specialRequests: String?
+    val specialRequests: String?,
+
+    @Column(nullable = false)
+    val status: String,
+
+    @Column(nullable = true)
+    val cancellationReason: String?,
+
+    @Column(nullable = true)
+    val cancelledBy: UUID?
 )
 {
     companion object
@@ -44,13 +53,22 @@ class BookingEntity(
                 startDate = booking.startDate.value,
                 endDate = booking.endDate.value,
                 numberOfPeople = booking.numberOfPeople.value,
-                specialRequests = booking.specialRequests?.value
+                specialRequests = booking.specialRequests?.value,
+                status = booking.status.label,
+                cancellationReason = booking.cancellation?.reason?.value,
+                cancelledBy = booking.cancellation?.cancelledBy?.value
             )
         }
     }
 
     fun toDomain(): Booking
     {
+        val cancellation = cancelledBy?.let {
+            Cancellation(
+                cancelledBy = UserId(it),
+                reason = cancellationReason?.let { r -> BookingCancellationReason(r) }
+            )
+        }
         return Booking(
             id = BookingId(id),
             roomId = RoomId(roomId),
@@ -58,7 +76,8 @@ class BookingEntity(
             startDate = BookingStartDate(startDate),
             endDate = BookingEndDate(endDate),
             numberOfPeople = BookingNumberOfPeople(numberOfPeople),
-            specialRequests = specialRequests?.let { BookingSpecialRequests(it) }
+            specialRequests = specialRequests?.let { BookingSpecialRequests(it) },
+            cancellation = cancellation
         )
     }
 }

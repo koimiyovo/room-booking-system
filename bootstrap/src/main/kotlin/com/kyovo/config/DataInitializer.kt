@@ -22,9 +22,22 @@ class DataInitializer(
         val trainingRoom = roomUseCase.save(NewRoom(RoomName("Training Room"), RoomCapacity(30)))
         roomUseCase.save(NewRoom(RoomName("Focus Room"), RoomCapacity(4)))
 
-        val alice = userUseCase.save(NewUser(UserName("Alice Johnson"), UserEmail("alice@example.com")))
-        val bob = userUseCase.save(NewUser(UserName("Bob Smith"), UserEmail("bob@example.com")))
-        userUseCase.save(NewUser(UserName("Carol White"), UserEmail("carol@example.com")))
+        userUseCase.save(
+            NewUser(
+                UserName("Admin"),
+                UserEmail("admin@example.com"),
+                UserPassword("admin123"),
+                UserRole.ADMIN
+            )
+        )
+        val alice = userUseCase.save(
+            NewUser(
+                UserName("Alice Johnson"),
+                UserEmail("alice@example.com"),
+                UserPassword("alice123")
+            )
+        )
+        val bob = userUseCase.save(NewUser(UserName("Bob Smith"), UserEmail("bob@example.com"), UserPassword("bob123")))
 
         bookingUseCase.create(
             NewBooking(

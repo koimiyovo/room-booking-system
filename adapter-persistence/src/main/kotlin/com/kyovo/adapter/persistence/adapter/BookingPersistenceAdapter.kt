@@ -19,7 +19,18 @@ class BookingPersistenceAdapter(private val jpaRepository: BookingJpaRepository)
         return jpaRepository.findById(id.value).orElse(null)?.toDomain()
     }
 
+    override fun findByUserId(userId: UserId): List<Booking>
+    {
+        return jpaRepository.findByUserId(userId.value).map { it.toDomain() }
+    }
+
     override fun save(booking: Booking): Booking
+    {
+        val entity = BookingEntity.fromDomain(booking)
+        return jpaRepository.save(entity).toDomain()
+    }
+
+    override fun update(booking: Booking): Booking
     {
         val entity = BookingEntity.fromDomain(booking)
         return jpaRepository.save(entity).toDomain()

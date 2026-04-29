@@ -8,5 +8,9 @@ interface UserRepository
 
     fun findById(id: UserId): User?
 
+    fun findByEmail(email: UserEmail): User?
+
     fun save(user: User): User
+
+    fun deleteById(id: UserId)
 }

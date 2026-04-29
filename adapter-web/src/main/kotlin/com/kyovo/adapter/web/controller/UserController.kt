@@ -1,7 +1,6 @@
 package com.kyovo.adapter.web.controller
 
-import com.kyovo.adapter.web.dto.CreateUserRequest
-import com.kyovo.adapter.web.dto.CreateUserResponse
+import com.kyovo.adapter.web.dto.UpdateUserRequest
 import com.kyovo.adapter.web.dto.UserResponse
 import com.kyovo.domain.model.UserId
 import com.kyovo.domain.port.primary.UserUseCase
@@ -12,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
 import java.util.*
 
@@ -44,17 +44,47 @@ class UserController(private val userUseCase: UserUseCase)
             ?: ResponseEntity.notFound().build()
     }
 
-    @PostMapping
-    @Operation(summary = "Create a new user")
-    @ApiResponse(responseCode = "201", description = "User created successfully")
-    fun create(@RequestBody request: CreateUserRequest): ResponseEntity<CreateUserResponse>
+    @PutMapping("/{id}")
+    @Operation(summary = "Update a user account")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "User updated successfully"),
+        ApiResponse(responseCode = "403", description = "Access denied"),
+        ApiResponse(responseCode = "404", description = "User not found"),
+        ApiResponse(responseCode = "409", description = "Email already in use")
+    )
+    fun update(
+        @PathVariable id: UUID,
+        @RequestBody request: UpdateUserRequest,
+        authentication: Authentication
+    ): ResponseEntity<UserResponse>
     {
-        val user = userUseCase.save(request.toNewUser())
-        val response = CreateUserResponse(
-            id = user.id.value,
-            name = user.name.value,
-            email = user.email.value
-        )
-        return ResponseEntity(response, HttpStatus.CREATED)
+        val targetId = UserId(id)
+        if (!isAdminOrOwner(authentication, targetId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        val user = userUseCase.update(targetId, request.toUpdateUser())
+        return ResponseEntity.ok(UserResponse.fromDomain(user))
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete a user account")
+    @ApiResponses(
+        ApiResponse(responseCode = "204", description = "User deleted successfully"),
+        ApiResponse(responseCode = "403", description = "Access denied"),
+        ApiResponse(responseCode = "404", description = "User not found")
+    )
+    fun delete(
+        @PathVariable id: UUID,
+        authentication: Authentication
+    ): ResponseEntity<Void>
+    {
+        val targetId = UserId(id)
+        if (!isAdminOrOwner(authentication, targetId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        userUseCase.delete(targetId)
+        return ResponseEntity.noContent().build()
+    }
+
+    private fun isAdminOrOwner(authentication: Authentication, targetId: UserId): Boolean
+    {
+        if (authentication.authorities.any { it.authority == "ROLE_ADMIN" }) return true
+        return UserId(UUID.fromString(authentication.name)) == targetId
     }
 }

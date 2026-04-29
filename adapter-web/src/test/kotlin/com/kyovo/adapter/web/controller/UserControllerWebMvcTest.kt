@@ -1,25 +1,30 @@
 package com.kyovo.adapter.web.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.kyovo.adapter.web.dto.CreateUserRequest
+import com.kyovo.adapter.web.dto.UpdateUserRequest
+import com.kyovo.adapter.web.security.JwtService
+import com.kyovo.domain.exception.UserNotFoundException
 import com.kyovo.domain.model.*
 import com.kyovo.domain.port.primary.UserUseCase
+import com.kyovo.domain.port.secondary.PasswordHashPort
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
-import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.http.MediaType
+import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
-import org.springframework.test.web.servlet.post
+import org.springframework.test.web.servlet.put
 import java.util.UUID
 
 @WebMvcTest(UserController::class)
-class UserControllerWebMvcTest {
-
+class UserControllerWebMvcTest
+{
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -29,11 +34,19 @@ class UserControllerWebMvcTest {
     @MockitoBean
     private lateinit var userUseCase: UserUseCase
 
+    @MockitoBean
+    private lateinit var passwordHashPort: PasswordHashPort
+
+    @MockitoBean
+    private lateinit var jwtService: JwtService
+
     private val userId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-    private val user = User(UserId(userId), UserName("Alice"), UserEmail("alice@example.com"))
+    private val user = User(UserId(userId), UserName("Alice"), UserEmail("alice@example.com"), UserPassword("hashed"), UserRole.USER)
 
     @Test
-    fun `GET api-users returns 200 with the list of users`() {
+    @WithMockUser(roles = ["ADMIN"])
+    fun `GET api-users returns 200 with the list of users`()
+    {
         whenever(userUseCase.findAll()).thenReturn(listOf(user))
 
         mockMvc.get("/api/users")
@@ -42,23 +55,27 @@ class UserControllerWebMvcTest {
                 jsonPath("$[0].id") { value(userId.toString()) }
                 jsonPath("$[0].name") { value("Alice") }
                 jsonPath("$[0].email") { value("alice@example.com") }
+                jsonPath("$[0].role") { value("USER") }
             }
     }
 
     @Test
-    fun `GET api-users returns 200 with an empty list`() {
+    @WithMockUser(roles = ["ADMIN"])
+    fun `GET api-users returns 200 with an empty list`()
+    {
         whenever(userUseCase.findAll()).thenReturn(emptyList())
 
         mockMvc.get("/api/users")
             .andExpect {
                 status { isOk() }
-                jsonPath("$") { isArray() }
                 content { json("[]") }
             }
     }
 
     @Test
-    fun `GET api-users-id returns 200 with the user when it exists`() {
+    @WithMockUser(roles = ["ADMIN"])
+    fun `GET api-users-id returns 200 with the user when it exists`()
+    {
         whenever(userUseCase.findById(UserId(userId))).thenReturn(user)
 
         mockMvc.get("/api/users/$userId")
@@ -71,7 +88,9 @@ class UserControllerWebMvcTest {
     }
 
     @Test
-    fun `GET api-users-id returns 404 when the user does not exist`() {
+    @WithMockUser(roles = ["ADMIN"])
+    fun `GET api-users-id returns 404 when the user does not exist`()
+    {
         whenever(userUseCase.findById(UserId(userId))).thenReturn(null)
 
         mockMvc.get("/api/users/$userId")
@@ -81,36 +100,69 @@ class UserControllerWebMvcTest {
     }
 
     @Test
-    fun `POST api-users returns 201 with the created user`() {
-        val request = CreateUserRequest("Bob", "bob@example.com")
-        val createdUser = User(UserId(userId), UserName("Bob"), UserEmail("bob@example.com"))
-        whenever(userUseCase.save(any())).thenReturn(createdUser)
+    @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000", roles = ["USER"])
+    fun `PUT api-users-id returns 200 when user updates own account`()
+    {
+        val request = UpdateUserRequest("Alice Updated", null, null)
+        val updated = user.copy(name = UserName("Alice Updated"))
+        whenever(userUseCase.update(any(), any())).thenReturn(updated)
+        whenever(passwordHashPort.hash(any())).thenReturn(UserPassword("hashed"))
 
-        mockMvc.post("/api/users") {
+        mockMvc.put("/api/users/$userId") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
+            with(csrf())
         }.andExpect {
-            status { isCreated() }
-            jsonPath("$.id") { value(userId.toString()) }
-            jsonPath("$.name") { value("Bob") }
-            jsonPath("$.email") { value("bob@example.com") }
+            status { isOk() }
+            jsonPath("$.name") { value("Alice Updated") }
         }
     }
 
     @Test
-    fun `POST api-users calls the use case with the request body values`() {
-        val request = CreateUserRequest("Charlie", "charlie@example.com")
-        whenever(userUseCase.save(any())).thenReturn(
-            User(UserId(userId), UserName("Charlie"), UserEmail("charlie@example.com"))
-        )
-
-        mockMvc.post("/api/users") {
+    @WithMockUser(username = "99999999-9999-9999-9999-999999999999", roles = ["USER"])
+    fun `PUT api-users-id returns 403 when user updates another account`()
+    {
+        mockMvc.put("/api/users/$userId") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(request)
+            content = objectMapper.writeValueAsString(UpdateUserRequest("X", null, null))
+            with(csrf())
         }.andExpect {
-            status { isCreated() }
+            status { isForbidden() }
         }
+    }
 
-        verify(userUseCase).save(NewUser(UserName("Charlie"), UserEmail("charlie@example.com")))
+    @Test
+    @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000", roles = ["USER"])
+    fun `DELETE api-users-id returns 204 when user deletes own account`()
+    {
+        mockMvc.delete("/api/users/$userId") {
+            with(csrf())
+        }.andExpect {
+            status { isNoContent() }
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `DELETE api-users-id returns 404 when user does not exist`()
+    {
+        whenever(userUseCase.delete(UserId(userId))).thenThrow(UserNotFoundException(UserId(userId)))
+
+        mockMvc.delete("/api/users/$userId") {
+            with(csrf())
+        }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "99999999-9999-9999-9999-999999999999", roles = ["USER"])
+    fun `DELETE api-users-id returns 403 when user deletes another account`()
+    {
+        mockMvc.delete("/api/users/$userId") {
+            with(csrf())
+        }.andExpect {
+            status { isForbidden() }
+        }
     }
 }

@@ -6,7 +6,8 @@ import java.util.*
 data class UserResponse(
     val id: UUID,
     val name: String,
-    val email: String
+    val email: String,
+    val role: String
 )
 {
     companion object
@@ -16,7 +17,8 @@ data class UserResponse(
             return UserResponse(
                 id = user.id.value,
                 name = user.name.value,
-                email = user.email.value
+                email = user.email.value,
+                role = user.role.label
             )
         }
     }
