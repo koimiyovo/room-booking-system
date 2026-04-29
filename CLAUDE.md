@@ -40,36 +40,38 @@ bootstrap ──────────► adapter-web + adapter-persistence
 
 ### Module responsibilities
 
-- **`domain`** — Pure business logic. No framework dependencies. Contains the `Room` aggregate, value objects (`RoomId`,
-  `RoomName`, `RoomCapacity`), `NewRoom`, and two port interfaces: `RoomUseCase` (primary/inbound) and
-  `RoomRepository` (secondary/outbound). `RoomService` implements `RoomUseCase` and depends only on `RoomRepository`.
+- **`domain`** — Pure business logic. No framework dependencies. Contains three aggregates:
+  - `Room` with value objects `RoomId`, `RoomName`, `RoomCapacity` and `NewRoom`. Ports: `RoomUseCase` / `RoomRepository`. `RoomService` depends only on `RoomRepository`.
+  - `User` with value objects `UserId`, `UserName`, `UserEmail` and `NewUser` (has `toUser()`). Ports: `UserUseCase` / `UserRepository`. `UserService` depends only on `UserRepository`.
+  - `Booking` with value objects `BookingId`, `BookingStartDate`, `BookingEndDate`, `BookingNumberOfPeople`, `BookingSpecialRequests` (nullable) and `NewBooking` (has `toBooking()`). Ports: `BookingUseCase` / `BookingRepository`. `BookingService` depends on **both** `BookingRepository` and `RoomRepository` to enforce two business rules: number of people must not exceed room capacity (`RoomCapacityExceededException`), and a room cannot be double-booked on overlapping dates (`BookingConflictException`). `RoomNotFoundException` is thrown when the referenced room does not exist. Domain exceptions live in `domain/exception/`.
 
-- **`adapter-web`** — REST layer. `RoomController` maps HTTP to `RoomUseCase`. DTOs (`CreateRoomRequest`,
-  `CreateRoomResponse`) live here and are never used in the domain.
+- **`adapter-web`** — REST layer. Controllers map HTTP to use cases. DTOs live here and are never used in the domain.
 
 - **`adapter-persistence`** — JPA layer. `RoomPersistenceAdapter` implements `RoomRepository` using
   `RoomJpaRepository` (Spring Data JPA) and `RoomEntity`. H2 in-memory database.
 
-- **`bootstrap`** — Composition root. Wires everything via `AppConfig` (`@Bean fun roomUseCase`). Contains
-  `application.yml` and `Application.kt`.
+- **`bootstrap`** — Composition root. Wires everything via `AppConfig` (`@Bean fun roomUseCase`, `userUseCase`, `bookingUseCase`). Contains `application.yml`, `Application.kt`, and `DataInitializer` (seeds sample rooms, users, and bookings on startup).
 
 ### Key conventions
 
 - Domain objects (`Room`, `RoomId`, etc.) use Kotlin `@JvmInline value class` for type-safe primitives. Jackson
   serializes them transparently to their underlying types.
-- `RoomService` is not a Spring `@Component` — it is instantiated manually in `AppConfig` to keep the domain
-  Spring-free.
-- The `RoomController` returns `Room` domain objects directly for GET endpoints, and `CreateRoomResponse` for POST.
+- Services (`RoomService`, `UserService`, `BookingService`) are not Spring `@Component` — they are instantiated manually in `AppConfig` to keep the domain Spring-free.
+- `GlobalExceptionHandler` (`@RestControllerAdvice`) in `adapter-web` maps domain exceptions to HTTP status codes: `RoomNotFoundException` → 404, `RoomCapacityExceededException` → 400, `BookingConflictException` → 409.
+- Every controller has its own dedicated DTOs — domain objects never cross the web layer:
+  - `XxxResponse` — returned by GET endpoints (`findAll`, `findById`). Has a `companion object { fun fromDomain(domain): XxxResponse }`.
+  - `CreateXxxRequest` — received by POST. Has a `fun toNewXxx(): NewXxx` method.
+  - `CreateXxxResponse` — returned by POST (201 Created).
 
 ## Tests
 
 Three test layers, each in its own module:
 
-| Layer       | Class                           | Module        | Annotation                                  |
-|-------------|---------------------------------|---------------|---------------------------------------------|
-| Domain unit | `RoomServiceTest`               | `domain`      | none (plain JUnit 5 + mockito-kotlin)       |
-| Web slice   | `RoomControllerWebMvcTest`      | `adapter-web` | `@WebMvcTest`                               |
-| Integration | `RoomControllerIntegrationTest` | `bootstrap`   | `@SpringBootTest` + `@AutoConfigureMockMvc` |
+| Layer       | Classes                                                                 | Module        | Annotation                                  |
+|-------------|-------------------------------------------------------------------------|---------------|---------------------------------------------|
+| Domain unit | `RoomServiceTest`, `UserServiceTest`, `BookingServiceTest`              | `domain`      | none (plain JUnit 5 + mockito-kotlin)       |
+| Web slice   | `RoomControllerWebMvcTest`, `UserControllerWebMvcTest`, `BookingControllerWebMvcTest` | `adapter-web` | `@WebMvcTest`            |
+| Integration | `RoomControllerIntegrationTest`, `UserControllerIntegrationTest`, `BookingControllerIntegrationTest` | `bootstrap` | `@SpringBootTest` + `@AutoConfigureMockMvc` |
 
 - `@WebMvcTest` requires `TestWebApplication` (in `adapter-web/src/test`) as the `@SpringBootApplication` anchor for the
   web slice.

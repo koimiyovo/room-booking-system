@@ -2,7 +2,7 @@ package com.kyovo.adapter.web.controller
 
 import com.kyovo.adapter.web.dto.CreateUserRequest
 import com.kyovo.adapter.web.dto.CreateUserResponse
-import com.kyovo.domain.model.User
+import com.kyovo.adapter.web.dto.UserResponse
 import com.kyovo.domain.model.UserId
 import com.kyovo.domain.port.primary.UserUseCase
 import io.swagger.v3.oas.annotations.Operation
@@ -23,9 +23,9 @@ class UserController(private val userUseCase: UserUseCase)
     @GetMapping
     @Operation(summary = "List all users")
     @ApiResponse(responseCode = "200", description = "User list returned successfully")
-    fun findAll(): List<User>
+    fun findAll(): List<UserResponse>
     {
-        return userUseCase.findAll()
+        return userUseCase.findAll().map { UserResponse.fromDomain(it) }
     }
 
     @GetMapping("/{id}")
@@ -37,10 +37,10 @@ class UserController(private val userUseCase: UserUseCase)
     fun findById(
         @Parameter(description = "UUID identifier of the user")
         @PathVariable id: UUID
-    ): ResponseEntity<User>
+    ): ResponseEntity<UserResponse>
     {
         return userUseCase.findById(UserId(id))
-            ?.let { ResponseEntity.ok(it) }
+            ?.let { ResponseEntity.ok(UserResponse.fromDomain(it)) }
             ?: ResponseEntity.notFound().build()
     }
 

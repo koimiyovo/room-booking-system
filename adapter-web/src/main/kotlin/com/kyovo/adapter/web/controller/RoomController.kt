@@ -2,7 +2,7 @@ package com.kyovo.adapter.web.controller
 
 import com.kyovo.adapter.web.dto.CreateRoomRequest
 import com.kyovo.adapter.web.dto.CreateRoomResponse
-import com.kyovo.domain.model.Room
+import com.kyovo.adapter.web.dto.RoomResponse
 import com.kyovo.domain.model.RoomId
 import com.kyovo.domain.port.primary.RoomUseCase
 import io.swagger.v3.oas.annotations.Operation
@@ -22,8 +22,8 @@ class RoomController(private val roomUseCase: RoomUseCase) {
     @GetMapping
     @Operation(summary = "List all rooms")
     @ApiResponse(responseCode = "200", description = "Room list returned successfully")
-    fun findAll(): List<Room> {
-        return roomUseCase.findAll()
+    fun findAll(): List<RoomResponse> {
+        return roomUseCase.findAll().map { RoomResponse.fromDomain(it) }
     }
 
     @GetMapping("/{id}")
@@ -35,9 +35,9 @@ class RoomController(private val roomUseCase: RoomUseCase) {
     fun findById(
         @Parameter(description = "UUID identifier of the room")
         @PathVariable id: UUID
-    ): ResponseEntity<Room> {
+    ): ResponseEntity<RoomResponse> {
         return roomUseCase.findById(RoomId(id))
-            ?.let { ResponseEntity.ok(it) }
+            ?.let { ResponseEntity.ok(RoomResponse.fromDomain(it)) }
             ?: ResponseEntity.notFound().build()
     }
 
