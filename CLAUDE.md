@@ -95,7 +95,7 @@ Four test layers, each in its own module:
 
 - `@WebMvcTest` requires `TestWebApplication` (in `adapter-web/src/test`) as the `@SpringBootApplication` anchor for the web slice.
 - Integration tests use `@BeforeEach roomJpaRepository.deleteAll()` for isolation.
-- `mockito-kotlin` (v5.4.0) is used for mocking in domain and web tests.
+- `mockito-kotlin` (v6.3.0) is used for mocking in domain and web tests.
 - `ArchitectureTest` uses `ClassFileImporter().importPackages("com.kyovo")` (not `@AnalyzeClasses`) so that Maven Surefire counts and reports the tests correctly. It enforces: domain free of Spring/JPA, no cross-adapter dependencies, persistence adapter naming convention, no cyclic dependencies within the domain.
 - Test names (backtick strings in Kotlin) must be written in English.
 - OpenAPI documentation (Swagger annotations: `@Tag`, `@Operation`, `@ApiResponse`, `@Parameter`, and `OpenApiConfig` descriptions) must be written in English.

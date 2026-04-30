@@ -13,12 +13,12 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 
 ## Tech stack
 
-- **Kotlin** 2.1 / **Java** 19
-- **Spring Boot** 3.4
+- **Kotlin** 2.3 / **Java** 19
+- **Spring Boot** 3.5
 - **Spring Security** — stateless JWT
 - **Spring Data JPA** / **H2** (in-memory)
-- **jjwt** 0.12 — JWT generation and validation
-- **ArchUnit** 1.3 — architecture rules enforced as tests
+- **jjwt** 0.13 — JWT generation and validation
+- **ArchUnit** 1.4 — architecture rules enforced as tests
 - **Maven** multi-module build
 
 ## Architecture
