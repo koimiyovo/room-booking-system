@@ -52,8 +52,8 @@ bootstrap ──────────► adapter-web + adapter-persistence
   - `JwtService` — generates and validates JWT tokens. `generateToken()` returns `AuthToken`; all other methods accept `AuthToken`.
   - `TokenBlacklistService` — in-memory revocation list using `ConcurrentHashMap<String, Long>`, with a nightly `@Scheduled` cleanup. Public API uses `AuthToken`.
   - `JwtAuthenticationFilter` — extracts the `Bearer` header, wraps it in `AuthToken`, checks the blacklist, validates, and sets the `SecurityContextHolder`.
-  - `BCryptPasswordHashAdapter` — implements the domain `PasswordHashPort` using `BCryptPasswordEncoder`.
-  - `SecurityConfig` — stateless JWT security. Public: `POST /api/auth/register`, `POST /api/auth/login`. ADMIN-only: `GET /api/users`, `GET /api/users/**`, `POST /api/rooms`, `GET /api/bookings`. All other endpoints require authentication.
+  - `BCryptPasswordHashAdapter` — implements the domain `PasswordHashPort`. Receives a `PasswordEncoder` via constructor injection (not hardcoded to `BCryptPasswordEncoder`).
+  - `SecurityConfig` — stateless JWT security. Declares `@Bean fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()`, which is the single source of truth for the hashing algorithm and is injected into `BCryptPasswordHashAdapter`. Public: `POST /api/auth/register`, `POST /api/auth/login`. ADMIN-only: `GET /api/users`, `GET /api/users/**`, `POST /api/rooms`, `GET /api/bookings`. All other endpoints require authentication.
 
 - **`adapter-persistence`** — JPA layer. Persistence adapters implement domain repository ports using Spring Data JPA entities and repositories. H2 in-memory database. Also contains `SpringTransactionAdapter`, which implements `TransactionPort` via `TransactionTemplate`.
 
@@ -84,16 +84,18 @@ bootstrap ──────────► adapter-web + adapter-persistence
 
 ## Tests
 
-Three test layers, each in its own module:
+Four test layers, each in its own module:
 
-| Layer       | Classes                                                                                   | Module        | Annotation                                  |
-|-------------|-------------------------------------------------------------------------------------------|---------------|---------------------------------------------|
-| Domain unit | `RoomServiceTest`, `UserServiceTest`, `BookingServiceTest`, `AuthServiceTest`             | `domain`      | none (plain JUnit 5 + mockito-kotlin)       |
-| Web slice   | `RoomControllerWebMvcTest`, `UserControllerWebMvcTest`, `BookingControllerWebMvcTest`, `AuthControllerWebMvcTest` | `adapter-web` | `@WebMvcTest` |
-| Integration | `RoomControllerIntegrationTest`, `UserControllerIntegrationTest`, `BookingControllerIntegrationTest`, `AuthControllerIntegrationTest` | `bootstrap` | `@SpringBootTest` + `@AutoConfigureMockMvc` |
+| Layer        | Classes                                                                                   | Module        | Annotation                                  |
+|--------------|-------------------------------------------------------------------------------------------|---------------|---------------------------------------------|
+| Domain unit  | `RoomServiceTest`, `UserServiceTest`, `BookingServiceTest`, `AuthServiceTest`             | `domain`      | none (plain JUnit 5 + mockito-kotlin)       |
+| Web slice    | `RoomControllerWebMvcTest`, `UserControllerWebMvcTest`, `BookingControllerWebMvcTest`, `AuthControllerWebMvcTest` | `adapter-web` | `@WebMvcTest` |
+| Integration  | `RoomControllerIntegrationTest`, `UserControllerIntegrationTest`, `BookingControllerIntegrationTest`, `AuthControllerIntegrationTest` | `bootstrap` | `@SpringBootTest` + `@AutoConfigureMockMvc` |
+| Architecture | `ArchitectureTest`                                                                        | `bootstrap`   | plain JUnit 5 + ArchUnit `ClassFileImporter` |
 
 - `@WebMvcTest` requires `TestWebApplication` (in `adapter-web/src/test`) as the `@SpringBootApplication` anchor for the web slice.
 - Integration tests use `@BeforeEach roomJpaRepository.deleteAll()` for isolation.
 - `mockito-kotlin` (v5.4.0) is used for mocking in domain and web tests.
+- `ArchitectureTest` uses `ClassFileImporter().importPackages("com.kyovo")` (not `@AnalyzeClasses`) so that Maven Surefire counts and reports the tests correctly. It enforces: domain free of Spring/JPA, no cross-adapter dependencies, persistence adapter naming convention, no cyclic dependencies within the domain.
 - Test names (backtick strings in Kotlin) must be written in English.
 - OpenAPI documentation (Swagger annotations: `@Tag`, `@Operation`, `@ApiResponse`, `@Parameter`, and `OpenApiConfig` descriptions) must be written in English.
