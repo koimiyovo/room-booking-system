@@ -21,7 +21,10 @@ import java.util.*
 class RoomController(private val roomUseCase: RoomUseCase) {
     @GetMapping
     @Operation(summary = "List all rooms")
-    @ApiResponse(responseCode = "200", description = "Room list returned successfully")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Room list returned successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required")
+    )
     fun findAll(): List<RoomResponse> {
         return roomUseCase.findAll().map { RoomResponse.fromDomain(it) }
     }
@@ -30,6 +33,7 @@ class RoomController(private val roomUseCase: RoomUseCase) {
     @Operation(summary = "Get a room by its identifier")
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Room found"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
         ApiResponse(responseCode = "404", description = "Room not found")
     )
     fun findById(
@@ -43,7 +47,11 @@ class RoomController(private val roomUseCase: RoomUseCase) {
 
     @PostMapping
     @Operation(summary = "Create a new room")
-    @ApiResponse(responseCode = "201", description = "Room created successfully")
+    @ApiResponses(
+        ApiResponse(responseCode = "201", description = "Room created successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Admin role required")
+    )
     fun create(@RequestBody request: CreateRoomRequest): ResponseEntity<CreateRoomResponse> {
         val room = roomUseCase.save(request.toNewRoom())
         val response = CreateRoomResponse(

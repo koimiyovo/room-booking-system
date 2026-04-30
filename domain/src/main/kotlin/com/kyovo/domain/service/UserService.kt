@@ -22,18 +22,6 @@ class UserService(
         return userRepository.findById(id)
     }
 
-    override fun findByEmail(email: UserEmail): User?
-    {
-        return userRepository.findByEmail(email)
-    }
-
-    override fun save(newUser: NewUser): User
-    {
-        if (userRepository.findByEmail(newUser.email) != null) throw EmailAlreadyUsedException(newUser.email)
-        val hashed = newUser.copy(password = passwordHashPort.hash(newUser.password.value))
-        return userRepository.save(hashed.toUser())
-    }
-
     override fun update(id: UserId, data: UpdateUser): User
     {
         val user = userRepository.findById(id) ?: throw UserNotFoundException(id)

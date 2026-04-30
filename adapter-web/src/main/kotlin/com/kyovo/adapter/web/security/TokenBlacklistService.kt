@@ -9,24 +9,24 @@ class TokenBlacklistService
 {
     private val blacklistedTokens = ConcurrentHashMap<String, Long>()
 
-    fun revokeToken(token: String, expirationTime: Long)
+    fun revokeToken(token: AuthToken, expirationTime: Long)
     {
-        blacklistedTokens[token] = expirationTime
+        blacklistedTokens[token.value] = expirationTime
     }
 
-    fun isTokenBlacklisted(token: String): Boolean
+    fun isTokenBlacklisted(token: AuthToken): Boolean
     {
-        if (!blacklistedTokens.containsKey(token))
+        if (!blacklistedTokens.containsKey(token.value))
         {
             return false
         }
 
-        val expirationTime = blacklistedTokens[token] ?: return false
+        val expirationTime = blacklistedTokens[token.value] ?: return false
         val isExpired = System.currentTimeMillis() > expirationTime
 
         if (isExpired)
         {
-            blacklistedTokens.remove(token)
+            blacklistedTokens.remove(token.value)
         }
 
         return !isExpired

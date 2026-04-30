@@ -30,7 +30,7 @@ class JwtAuthenticationFilter(
             return
         }
 
-        val token = authHeader.substring(7)
+        val token = AuthToken(authHeader.substring(7))
 
         if (tokenBlacklistService?.isTokenBlacklisted(token) == true)
         {

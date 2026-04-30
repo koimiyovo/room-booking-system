@@ -1,3 +1,5 @@
 package com.kyovo.adapter.web.dto
 
-data class LoginResponse(val token: String)
+import com.kyovo.adapter.web.security.AuthToken
+
+data class LoginResponse(val token: AuthToken)

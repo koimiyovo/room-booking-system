@@ -3,12 +3,13 @@ package com.kyovo.adapter.web.controller
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.kyovo.adapter.web.dto.LoginRequest
 import com.kyovo.adapter.web.dto.RegisterRequest
+import com.kyovo.adapter.web.security.AuthToken
 import com.kyovo.adapter.web.security.JwtService
 import com.kyovo.adapter.web.security.TokenBlacklistService
 import com.kyovo.domain.exception.EmailAlreadyUsedException
+import com.kyovo.domain.exception.InvalidCredentialsException
 import com.kyovo.domain.model.*
-import com.kyovo.domain.port.primary.UserUseCase
-import com.kyovo.domain.port.secondary.PasswordHashPort
+import com.kyovo.domain.port.primary.AuthUseCase
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
@@ -34,10 +35,7 @@ class AuthControllerWebMvcTest
     private lateinit var objectMapper: ObjectMapper
 
     @MockitoBean
-    private lateinit var userUseCase: UserUseCase
-
-    @MockitoBean
-    private lateinit var passwordHashPort: PasswordHashPort
+    private lateinit var authUseCase: AuthUseCase
 
     @MockitoBean
     private lateinit var jwtService: JwtService
@@ -52,7 +50,7 @@ class AuthControllerWebMvcTest
     @Test
     fun `POST api-auth-register returns 201 with user info`()
     {
-        whenever(userUseCase.save(any())).thenReturn(savedUser)
+        whenever(authUseCase.register(any())).thenReturn(savedUser)
 
         mockMvc.post("/api/auth/register") {
             contentType = MediaType.APPLICATION_JSON
@@ -69,7 +67,7 @@ class AuthControllerWebMvcTest
     @Test
     fun `POST api-auth-register returns 409 when email is already in use`()
     {
-        whenever(userUseCase.save(any())).thenThrow(EmailAlreadyUsedException(UserEmail("alice@example.com")))
+        whenever(authUseCase.register(any())).thenThrow(EmailAlreadyUsedException(UserEmail("alice@example.com")))
 
         mockMvc.post("/api/auth/register") {
             contentType = MediaType.APPLICATION_JSON
@@ -83,9 +81,8 @@ class AuthControllerWebMvcTest
     @Test
     fun `POST api-auth-login returns 200 with a token`()
     {
-        whenever(userUseCase.findByEmail(UserEmail("alice@example.com"))).thenReturn(savedUser)
-        whenever(passwordHashPort.matches("secret", UserPassword("hashed"))).thenReturn(true)
-        whenever(jwtService.generateToken(UserId(userId), UserRole.USER)).thenReturn("jwt-token")
+        whenever(authUseCase.login(UserEmail("alice@example.com"), "secret")).thenReturn(savedUser)
+        whenever(jwtService.generateToken(UserId(userId), UserRole.USER)).thenReturn(AuthToken("jwt-token"))
 
         mockMvc.post("/api/auth/login") {
             contentType = MediaType.APPLICATION_JSON
@@ -100,7 +97,7 @@ class AuthControllerWebMvcTest
     @Test
     fun `POST api-auth-login returns 401 when email is unknown`()
     {
-        whenever(userUseCase.findByEmail(any())).thenReturn(null)
+        whenever(authUseCase.login(any(), any())).thenThrow(InvalidCredentialsException())
 
         mockMvc.post("/api/auth/login") {
             contentType = MediaType.APPLICATION_JSON
@@ -114,8 +111,7 @@ class AuthControllerWebMvcTest
     @Test
     fun `POST api-auth-login returns 401 when password is wrong`()
     {
-        whenever(userUseCase.findByEmail(UserEmail("alice@example.com"))).thenReturn(savedUser)
-        whenever(passwordHashPort.matches("wrong", UserPassword("hashed"))).thenReturn(false)
+        whenever(authUseCase.login(any(), any())).thenThrow(InvalidCredentialsException())
 
         mockMvc.post("/api/auth/login") {
             contentType = MediaType.APPLICATION_JSON
@@ -130,7 +126,8 @@ class AuthControllerWebMvcTest
     @WithMockUser
     fun `POST api-auth-logout returns 200 and revokes the token`()
     {
-        val token = "valid-jwt-token"
+        val rawToken = "valid-jwt-token"
+        val token = AuthToken(rawToken)
         val expirationTime = System.currentTimeMillis() + 3600000
 
         whenever(jwtService.extractExpirationTime(token)).thenReturn(expirationTime)
@@ -138,7 +135,7 @@ class AuthControllerWebMvcTest
 
         mockMvc.post("/api/auth/logout") {
             contentType = MediaType.APPLICATION_JSON
-            header("Authorization", "Bearer $token")
+            header("Authorization", "Bearer $rawToken")
             with(csrf())
         }.andExpect {
             status { isOk() }
@@ -161,14 +158,14 @@ class AuthControllerWebMvcTest
     @Test
     fun `POST api-auth-logout returns 401 when token is invalid`()
     {
-        val token = "invalid-jwt-token"
+        val token = AuthToken("invalid-jwt-token")
 
         whenever(jwtService.extractExpirationTime(token)).thenReturn(null)
         whenever(jwtService.validateToken(token)).thenReturn(false)
 
         mockMvc.post("/api/auth/logout") {
             contentType = MediaType.APPLICATION_JSON
-            header("Authorization", "Bearer $token")
+            header("Authorization", "Bearer ${token.value}")
             with(csrf())
         }.andExpect {
             status { isUnauthorized() }

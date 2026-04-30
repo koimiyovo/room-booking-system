@@ -4,12 +4,12 @@ import com.kyovo.adapter.web.dto.LoginRequest
 import com.kyovo.adapter.web.dto.LoginResponse
 import com.kyovo.adapter.web.dto.RegisterRequest
 import com.kyovo.adapter.web.dto.UserResponse
+import com.kyovo.adapter.web.security.AuthToken
 import com.kyovo.adapter.web.security.JwtService
 import com.kyovo.adapter.web.security.TokenBlacklistService
 import com.kyovo.domain.exception.InvalidCredentialsException
 import com.kyovo.domain.model.UserEmail
-import com.kyovo.domain.port.primary.UserUseCase
-import com.kyovo.domain.port.secondary.PasswordHashPort
+import com.kyovo.domain.port.primary.AuthUseCase
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
@@ -26,8 +26,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/auth")
 @Tag(name = "Authentication", description = "Account registration and login")
 class AuthController(
-    private val userUseCase: UserUseCase,
-    private val passwordHashPort: PasswordHashPort,
+    private val authUseCase: AuthUseCase,
     private val jwtService: JwtService,
     private val tokenBlacklistService: TokenBlacklistService
 )
@@ -40,7 +39,7 @@ class AuthController(
     )
     fun register(@RequestBody request: RegisterRequest): ResponseEntity<UserResponse>
     {
-        val user = userUseCase.save(request.toNewUser())
+        val user = authUseCase.register(request.toNewUser())
         return ResponseEntity(UserResponse.fromDomain(user), HttpStatus.CREATED)
     }
 
@@ -52,9 +51,7 @@ class AuthController(
     )
     fun login(@RequestBody request: LoginRequest): ResponseEntity<LoginResponse>
     {
-        val user = userUseCase.findByEmail(UserEmail(request.email))
-            ?: throw InvalidCredentialsException()
-        if (!passwordHashPort.matches(request.password, user.password)) throw InvalidCredentialsException()
+        val user = authUseCase.login(UserEmail(request.email), request.password)
         val token = jwtService.generateToken(user.id, user.role)
         return ResponseEntity.ok(LoginResponse(token))
     }
@@ -70,7 +67,7 @@ class AuthController(
         val authHeader = request.getHeader("Authorization")
         if (authHeader != null && authHeader.startsWith("Bearer "))
         {
-            val token = authHeader.substring(7)
+            val token = AuthToken(authHeader.substring(7))
             val expirationTime = jwtService.extractExpirationTime(token)
             if (expirationTime != null && jwtService.validateToken(token))
             {

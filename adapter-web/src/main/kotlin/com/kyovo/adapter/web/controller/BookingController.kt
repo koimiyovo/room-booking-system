@@ -27,7 +27,11 @@ class BookingController(private val bookingUseCase: BookingUseCase)
 {
     @GetMapping
     @Operation(summary = "List all bookings")
-    @ApiResponse(responseCode = "200", description = "Booking list returned successfully")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Booking list returned successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Admin role required")
+    )
     fun findAll(): List<BookingResponse>
     {
         return bookingUseCase.findAll().map { BookingResponse.fromDomain(it) }
@@ -35,7 +39,10 @@ class BookingController(private val bookingUseCase: BookingUseCase)
 
     @GetMapping("/my")
     @Operation(summary = "List bookings of the authenticated user")
-    @ApiResponse(responseCode = "200", description = "Booking list returned successfully")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Booking list returned successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required")
+    )
     fun findMine(authentication: Authentication): List<BookingResponse>
     {
         val userId = UserId(UUID.fromString(authentication.name))
@@ -46,6 +53,7 @@ class BookingController(private val bookingUseCase: BookingUseCase)
     @Operation(summary = "Get a booking by its identifier")
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Booking found"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
         ApiResponse(responseCode = "403", description = "Access denied"),
         ApiResponse(responseCode = "404", description = "Booking not found")
     )
@@ -67,6 +75,7 @@ class BookingController(private val bookingUseCase: BookingUseCase)
     @ApiResponses(
         ApiResponse(responseCode = "201", description = "Booking created successfully"),
         ApiResponse(responseCode = "400", description = "Room capacity exceeded"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
         ApiResponse(responseCode = "404", description = "Room not found"),
         ApiResponse(responseCode = "409", description = "Booking conflict for this room and period")
     )
@@ -89,6 +98,7 @@ class BookingController(private val bookingUseCase: BookingUseCase)
     @Operation(summary = "Cancel a booking")
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "Booking cancelled successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
         ApiResponse(responseCode = "403", description = "Access denied"),
         ApiResponse(responseCode = "404", description = "Booking not found"),
         ApiResponse(responseCode = "409", description = "Booking is already cancelled")

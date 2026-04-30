@@ -23,7 +23,11 @@ class UserController(private val userUseCase: UserUseCase)
 {
     @GetMapping
     @Operation(summary = "List all users")
-    @ApiResponse(responseCode = "200", description = "User list returned successfully")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "User list returned successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Admin role required")
+    )
     fun findAll(): List<UserResponse>
     {
         return userUseCase.findAll().map { UserResponse.fromDomain(it) }
@@ -33,6 +37,8 @@ class UserController(private val userUseCase: UserUseCase)
     @Operation(summary = "Get a user by its identifier")
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "User found"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Admin role required"),
         ApiResponse(responseCode = "404", description = "User not found")
     )
     fun findById(
@@ -49,6 +55,7 @@ class UserController(private val userUseCase: UserUseCase)
     @Operation(summary = "Update a user account")
     @ApiResponses(
         ApiResponse(responseCode = "200", description = "User updated successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
         ApiResponse(responseCode = "403", description = "Access denied"),
         ApiResponse(responseCode = "404", description = "User not found"),
         ApiResponse(responseCode = "409", description = "Email already in use")
@@ -69,6 +76,7 @@ class UserController(private val userUseCase: UserUseCase)
     @Operation(summary = "Delete a user account")
     @ApiResponses(
         ApiResponse(responseCode = "204", description = "User deleted successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
         ApiResponse(responseCode = "403", description = "Access denied"),
         ApiResponse(responseCode = "404", description = "User not found")
     )

@@ -61,55 +61,6 @@ class UserServiceTest
     }
 
     @Test
-    fun `findByEmail returns the user when it exists`()
-    {
-        val email = UserEmail("alice@example.com")
-        whenever(userRepository.findByEmail(email)).thenReturn(existingUser)
-
-        val result = userService.findByEmail(email)
-
-        assertThat(result).isEqualTo(existingUser)
-    }
-
-    @Test
-    fun `save hashes the password before persisting`()
-    {
-        val newUser = NewUser(UserName("Charlie"), UserEmail("charlie@example.com"), UserPassword("raw"))
-        val captor = argumentCaptor<User>()
-        whenever(userRepository.findByEmail(newUser.email)).thenReturn(null)
-        whenever(passwordHashPort.hash("raw")).thenReturn(UserPassword("hashed"))
-        whenever(userRepository.save(any())).thenAnswer { it.getArgument<User>(0) }
-
-        userService.save(newUser)
-
-        verify(userRepository).save(captor.capture())
-        assertThat(captor.firstValue.password).isEqualTo(UserPassword("hashed"))
-    }
-
-    @Test
-    fun `save returns the user persisted by the repository`()
-    {
-        val newUser = NewUser(UserName("Diana"), UserEmail("diana@example.com"), UserPassword("raw"))
-        whenever(userRepository.findByEmail(newUser.email)).thenReturn(null)
-        whenever(passwordHashPort.hash("raw")).thenReturn(UserPassword("hashed"))
-        whenever(userRepository.save(any())).thenReturn(existingUser)
-
-        val result = userService.save(newUser)
-
-        assertThat(result).isEqualTo(existingUser)
-    }
-
-    @Test
-    fun `save throws EmailAlreadyUsedException when email is taken`()
-    {
-        val newUser = NewUser(UserName("Dup"), UserEmail("alice@example.com"), UserPassword("raw"))
-        whenever(userRepository.findByEmail(newUser.email)).thenReturn(existingUser)
-
-        assertThatThrownBy { userService.save(newUser) }
-            .isInstanceOf(EmailAlreadyUsedException::class.java)
-    }
-
-    @Test
     fun `update changes name and email when both are provided`()
     {
         val data = UpdateUser(UserName("New Name"), UserEmail("new@example.com"), null)

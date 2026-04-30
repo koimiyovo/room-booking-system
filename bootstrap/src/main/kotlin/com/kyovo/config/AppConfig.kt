@@ -5,6 +5,7 @@ import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.RoomRepository
 import com.kyovo.domain.port.secondary.TransactionPort
 import com.kyovo.domain.port.secondary.UserRepository
+import com.kyovo.domain.service.AuthService
 import com.kyovo.domain.service.BookingService
 import com.kyovo.domain.service.RoomService
 import com.kyovo.domain.service.UserService
@@ -18,6 +19,12 @@ class AppConfig
     fun roomUseCase(roomRepository: RoomRepository): RoomService
     {
         return RoomService(roomRepository)
+    }
+
+    @Bean
+    fun authUseCase(userRepository: UserRepository, passwordHashPort: PasswordHashPort): AuthService
+    {
+        return AuthService(userRepository, passwordHashPort)
     }
 
     @Bean
