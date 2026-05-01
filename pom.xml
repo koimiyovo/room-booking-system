@@ -17,8 +17,9 @@
     <packaging>pom</packaging>
     <modules>
         <module>domain</module>
-        <module>adapter-web</module>
-        <module>adapter-persistence</module>
+        <module>infrastructure-api</module>
+        <module>infrastructure-persistence</module>
+        <module>infrastructure-provider</module>
         <module>bootstrap</module>
     </modules>
 
@@ -42,12 +43,17 @@
             </dependency>
             <dependency>
                 <groupId>com.kyovo</groupId>
-                <artifactId>adapter-web</artifactId>
+                <artifactId>infrastructure-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.kyovo</groupId>
-                <artifactId>adapter-persistence</artifactId>
+                <artifactId>infrastructure-persistence</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.kyovo</groupId>
+                <artifactId>infrastructure-provider</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

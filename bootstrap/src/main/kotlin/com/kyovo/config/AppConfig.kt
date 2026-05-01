@@ -1,7 +1,6 @@
 package com.kyovo.config
 
 import com.kyovo.domain.port.secondary.*
-import com.kyovo.domain.provider.TimeProvider
 import com.kyovo.domain.service.AuthService
 import com.kyovo.domain.service.BookingService
 import com.kyovo.domain.service.RoomService
@@ -9,21 +8,14 @@ import com.kyovo.domain.service.UserService
 import com.kyovo.provider.SystemTimeProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import java.time.Clock
 
 @Configuration
 class AppConfig
 {
     @Bean
-    fun clock(): Clock
+    fun clockPort(): ClockPort
     {
-        return Clock.systemDefaultZone()
-    }
-
-    @Bean
-    fun timeProvider(clock: Clock): TimeProvider
-    {
-        return SystemTimeProvider(clock)
+        return SystemTimeProvider()
     }
 
     @Bean
@@ -36,10 +28,10 @@ class AppConfig
     fun authUseCase(
         userRepository: UserRepository,
         passwordHashPort: PasswordHashPort,
-        timeProvider: TimeProvider
+        clockPort: ClockPort
     ): AuthService
     {
-        return AuthService(userRepository, passwordHashPort, timeProvider)
+        return AuthService(userRepository, passwordHashPort, clockPort)
     }
 
     @Bean

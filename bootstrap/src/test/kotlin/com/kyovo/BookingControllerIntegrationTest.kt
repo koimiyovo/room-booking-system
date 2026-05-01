@@ -5,12 +5,14 @@ import com.kyovo.adapter.persistence.repository.BookingJpaRepository
 import com.kyovo.adapter.persistence.repository.RoomJpaRepository
 import com.kyovo.adapter.persistence.repository.UserJpaRepository
 import com.kyovo.adapter.web.dto.*
+import com.kyovo.config.TestTimeProviderConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.MockMvc
@@ -22,6 +24,7 @@ import java.time.OffsetDateTime
 import java.util.*
 
 @SpringBootTest
+@Import(TestTimeProviderConfig::class)
 @AutoConfigureMockMvc
 class BookingControllerIntegrationTest
 {
@@ -120,9 +123,9 @@ class BookingControllerIntegrationTest
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isCreated() }
-            jsonPath("$.roomId") { value(roomId.toString()) }
-            jsonPath("$.userId") { value(aliceId.toString()) }
-            jsonPath("$.specialRequests") { value("Projector needed") }
+            jsonPath("$.room_id") { value(roomId.toString()) }
+            jsonPath("$.user_id") { value(aliceId.toString()) }
+            jsonPath("$.special_requests") { value("Projector needed") }
         }.andReturn()
 
         val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
@@ -301,7 +304,7 @@ class BookingControllerIntegrationTest
         }.andExpect {
             status { isOk() }
             jsonPath("$.length()") { value(1) }
-            jsonPath("$[0].userId") { value(aliceId.toString()) }
+            jsonPath("$[0].user_id") { value(aliceId.toString()) }
         }
 
         mockMvc.get("/api/bookings/my") {

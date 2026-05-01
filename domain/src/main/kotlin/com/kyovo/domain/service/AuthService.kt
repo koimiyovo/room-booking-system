@@ -7,21 +7,21 @@ import com.kyovo.domain.model.User
 import com.kyovo.domain.model.UserEmail
 import com.kyovo.domain.model.UserRegistrationDate
 import com.kyovo.domain.port.primary.AuthUseCase
+import com.kyovo.domain.port.secondary.ClockPort
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.UserRepository
-import com.kyovo.domain.provider.TimeProvider
 
 class AuthService(
     private val userRepository: UserRepository,
     private val passwordHashPort: PasswordHashPort,
-    private val timeProvider: TimeProvider
+    private val clockPort: ClockPort
 ) : AuthUseCase
 {
     override fun register(newUser: NewUser): User
     {
         if (userRepository.findByEmail(newUser.email) != null) throw EmailAlreadyUsedException(newUser.email)
         val hashed = newUser.copy(password = passwordHashPort.hash(newUser.password.value))
-        return userRepository.save(hashed.toUser(UserRegistrationDate(timeProvider.now())))
+        return userRepository.save(hashed.toUser(UserRegistrationDate(clockPort.now())))
     }
 
     override fun login(email: UserEmail, rawPassword: String): User

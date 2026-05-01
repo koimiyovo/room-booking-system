@@ -12,10 +12,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.time.Clock
-import java.time.Instant
 import java.time.OffsetDateTime
-import java.time.ZoneOffset
 import java.util.*
 
 class UserServiceTest
@@ -23,7 +20,6 @@ class UserServiceTest
     private val userRepository: UserRepository = mock()
     private val passwordHashPort: PasswordHashPort = mock()
     private val userService = UserService(userRepository, passwordHashPort)
-    private val fixedClock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC)
 
     private val userId = UserId(UUID.randomUUID())
     private val existingUser = User(
@@ -32,7 +28,7 @@ class UserServiceTest
         UserEmail("alice@example.com"),
         UserPassword("hashed"),
         UserRole.USER,
-        UserRegistrationDate(OffsetDateTime.now(fixedClock))
+        UserRegistrationDate(OffsetDateTime.now())
     )
 
     @Test

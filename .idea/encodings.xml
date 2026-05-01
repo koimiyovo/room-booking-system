@@ -5,6 +5,10 @@
     <file url="file://$PROJECT_DIR$/adapter-web/src/main/kotlin" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/bootstrap/src/main/kotlin" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/domain/src/main/kotlin" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/infrastructure-api/src/main/kotlin" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/infrastructure-persistence/src/main/kotlin" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/infrastructure-provider/src/main/kotlin" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/provider/src/main/kotlin" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/kotlin" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
   </component>

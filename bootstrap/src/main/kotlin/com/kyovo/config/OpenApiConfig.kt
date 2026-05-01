@@ -1,5 +1,8 @@
 package com.kyovo.config
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.PropertyNamingStrategies
+import io.swagger.v3.core.jackson.ModelResolver
 import io.swagger.v3.oas.models.Components
 import io.swagger.v3.oas.models.OpenAPI
 import io.swagger.v3.oas.models.info.Contact
@@ -12,6 +15,12 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class OpenApiConfig
 {
+    @Bean
+    fun modelResolver(): ModelResolver
+    {
+        return ModelResolver(ObjectMapper().setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE))
+    }
+
     @Bean
     fun openAPI(): OpenAPI
     {

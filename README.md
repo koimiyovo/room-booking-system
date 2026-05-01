@@ -23,20 +23,22 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 
 ## Architecture
 
-Hexagonal architecture with four Maven modules. Dependency flow is strictly one-way:
+Hexagonal architecture with five Maven modules. Dependency flow is strictly one-way:
 
 ```
-adapter-web ──────┐
-                  ├──► domain
-adapter-persistence┘
-bootstrap ──────────► adapter-web + adapter-persistence
+infrastructure-api ──────┐
+                         ├──► domain
+infrastructure-persistence┘
+infrastructure-provider ──► domain
+bootstrap ──────────────► infrastructure-api + infrastructure-persistence + infrastructure-provider
 ```
 
 | Module | Role |
 |---|---|
 | `domain` | Pure business logic — no framework dependencies |
-| `adapter-web` | REST controllers, DTOs, JWT security stack |
-| `adapter-persistence` | JPA entities, Spring Data repositories |
+| `infrastructure-api` | REST controllers, DTOs, JWT security stack |
+| `infrastructure-persistence` | JPA entities, Spring Data repositories |
+| `infrastructure-provider` | `SystemTimeProvider` — implements `ClockPort` |
 | `bootstrap` | Composition root — wires everything via `AppConfig` |
 
 ## Prerequisites
@@ -108,7 +110,7 @@ mvn clean test
 
 # Single module
 mvn clean test -pl domain
-mvn clean test -pl adapter-web
+mvn clean test -pl infrastructure-api
 mvn clean test -pl bootstrap
 
 # Single class (requires prior build of dependencies)

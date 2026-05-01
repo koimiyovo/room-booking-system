@@ -3,9 +3,9 @@ package com.kyovo.domain.service
 import com.kyovo.domain.exception.EmailAlreadyUsedException
 import com.kyovo.domain.exception.InvalidCredentialsException
 import com.kyovo.domain.model.*
+import com.kyovo.domain.port.secondary.ClockPort
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.UserRepository
-import com.kyovo.domain.provider.TimeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -19,14 +19,14 @@ class AuthServiceTest
 {
     private val userRepository: UserRepository = mock()
     private val passwordHashPort: PasswordHashPort = mock()
-    private val timeProvider = object : TimeProvider
+    private val clockPort = object : ClockPort
     {
         override fun now(): OffsetDateTime
         {
             return OffsetDateTime.of(LocalDateTime.of(2026, 4, 1, 0, 0), ZoneOffset.UTC)
         }
     }
-    private val authService = AuthService(userRepository, passwordHashPort, timeProvider)
+    private val authService = AuthService(userRepository, passwordHashPort, clockPort)
 
     private val userId = UserId(UUID.randomUUID())
     private val existingUser = User(
@@ -35,7 +35,7 @@ class AuthServiceTest
         UserEmail("alice@example.com"),
         UserPassword("hashed"),
         UserRole.USER,
-        UserRegistrationDate(timeProvider.now())
+        UserRegistrationDate(clockPort.now())
     )
 
     @Test

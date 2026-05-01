@@ -5,12 +5,14 @@ import com.kyovo.adapter.persistence.repository.RoomJpaRepository
 import com.kyovo.adapter.persistence.repository.UserJpaRepository
 import com.kyovo.adapter.web.dto.CreateRoomRequest
 import com.kyovo.adapter.web.dto.LoginRequest
+import com.kyovo.config.TestTimeProviderConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.MockMvc
@@ -21,6 +23,7 @@ import java.time.OffsetDateTime
 import java.util.*
 
 @SpringBootTest
+@Import(TestTimeProviderConfig::class)
 @AutoConfigureMockMvc
 class RoomControllerIntegrationTest
 {
