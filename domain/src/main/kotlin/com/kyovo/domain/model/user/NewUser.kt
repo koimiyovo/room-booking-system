@@ -9,6 +9,14 @@ data class NewUser(
 {
     fun toUser(registrationDate: UserRegistrationDate): User
     {
-        return User(UserId.generate(), name, email, password, role, registrationDate)
+        return User(
+            id = UserId.generate(),
+            name = name,
+            email = email,
+            password = password,
+            role = role,
+            registeredAt = registrationDate,
+            statusInfo = UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(registrationDate.value))
+        )
     }
 }

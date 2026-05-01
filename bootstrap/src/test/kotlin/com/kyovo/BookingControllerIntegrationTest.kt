@@ -60,12 +60,14 @@ class BookingControllerIntegrationTest
 
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "Admin",
-                "admin@test.com",
-                passwordEncoder.encode("admin123")!!,
-                "ADMIN",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "Admin",
+                email = "admin@test.com",
+                password = passwordEncoder.encode("admin123")!!,
+                role = "ADMIN",
+                registeredAt = OffsetDateTime.now(),
+                status = "CREATED",
+                since = OffsetDateTime.now()
             )
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")

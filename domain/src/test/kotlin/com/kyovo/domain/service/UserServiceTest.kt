@@ -28,7 +28,8 @@ class UserServiceTest
         UserEmail("alice@example.com"),
         UserPassword("hashed"),
         UserRole.USER,
-        UserRegistrationDate(OffsetDateTime.now())
+        UserRegistrationDate(OffsetDateTime.now()),
+        UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()))
     )
 
     @Test

@@ -6,6 +6,7 @@ import com.kyovo.infrastructure.api.dto.RegisterRequest
 import com.kyovo.infrastructure.api.dto.UpdateUserRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
+import com.kyovo.infrastructure.provider.MutableTimeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -17,7 +18,9 @@ import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.*
 import tools.jackson.databind.ObjectMapper
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.*
 
 @SpringBootTest
@@ -40,19 +43,26 @@ class UserControllerIntegrationTest
     private lateinit var aliceToken: String
     private lateinit var aliceId: String
 
+    @Autowired
+    lateinit var timeProvider: MutableTimeProvider
+
     @BeforeEach
     fun setUp()
     {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 2, 1, 10, 0), ZoneOffset.UTC))
+
         userJpaRepository.deleteAll()
 
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "Admin",
-                "admin@test.com",
-                passwordEncoder.encode("admin123")!!,
-                "ADMIN",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "Admin",
+                email = "admin@test.com",
+                password = passwordEncoder.encode("admin123")!!,
+                role = "ADMIN",
+                registeredAt = timeProvider.now(),
+                status = "CREATED",
+                since = timeProvider.now(),
             )
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
@@ -104,6 +114,8 @@ class UserControllerIntegrationTest
             status { isOk() }
             jsonPath("$.id") { value(aliceId) }
             jsonPath("$.name") { value("Alice") }
+            jsonPath("$.status_info.status") { value("CREATED") }
+            jsonPath("$.status_info.since") { value("2026-02-01T10:00:00Z") }
         }
     }
 
@@ -122,12 +134,37 @@ class UserControllerIntegrationTest
     {
         val savedUser = userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "Alice",
-                "alice@example.com",
-                passwordEncoder.encode("password")!!,
-                "INVALID_ROLE",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "Alice",
+                email = "alice@example.com",
+                password = passwordEncoder.encode("password")!!,
+                role = "INVALID_ROLE",
+                registeredAt = timeProvider.now(),
+                status = "CREATED",
+                since = timeProvider.now(),
+            )
+        )
+
+        mockMvc.get("/api/users/${savedUser.id}") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isInternalServerError() }
+        }
+    }
+
+    @Test
+    fun `GET api-users-id returns 500 when user status is invalid`()
+    {
+        val savedUser = userJpaRepository.save(
+            UserEntity(
+                id = UUID.randomUUID(),
+                name = "Alice",
+                email = "alice@example.com",
+                password = passwordEncoder.encode("password")!!,
+                role = "USER",
+                registeredAt = timeProvider.now(),
+                status = "INVALID_STATUS",
+                since = timeProvider.now(),
             )
         )
 

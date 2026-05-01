@@ -2,6 +2,7 @@ package com.kyovo.infrastructure.persistence.entity
 
 import com.kyovo.domain.model.user.*
 import com.kyovo.infrastructure.persistence.exception.InvalidRoleException
+import com.kyovo.infrastructure.persistence.exception.InvalidUserStatusException
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
@@ -28,7 +29,13 @@ class UserEntity(
     val role: String,
 
     @Column(nullable = false)
-    val registeredAt: OffsetDateTime
+    val registeredAt: OffsetDateTime,
+
+    @Column(nullable = false)
+    val status: String,
+
+    @Column(nullable = false)
+    val since: OffsetDateTime
 )
 {
     companion object
@@ -41,7 +48,9 @@ class UserEntity(
                 email = user.email.value,
                 password = user.password.value,
                 role = user.role.label,
-                registeredAt = user.registeredAt.value
+                registeredAt = user.registeredAt.value,
+                status = user.statusInfo.status.label,
+                since = user.statusInfo.since.value
             )
         }
     }
@@ -54,7 +63,12 @@ class UserEntity(
             email = UserEmail(email),
             password = UserPassword(password),
             role = UserRole.entries.firstOrNull { it.label == role } ?: throw InvalidRoleException(role),
-            registeredAt = UserRegistrationDate(registeredAt)
+            registeredAt = UserRegistrationDate(registeredAt),
+            statusInfo = UserStatusInfo(
+                status = UserStatus.entries.firstOrNull { it.label == status }
+                    ?: throw InvalidUserStatusException(status),
+                since = UserStatusInfoDate(since)
+            )
         )
     }
 }

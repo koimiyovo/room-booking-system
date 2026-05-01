@@ -35,7 +35,8 @@ class AuthServiceTest
         UserEmail("alice@example.com"),
         UserPassword("hashed"),
         UserRole.USER,
-        UserRegistrationDate(clockPort.now())
+        UserRegistrationDate(clockPort.now()),
+        UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(clockPort.now()))
     )
 
     @Test

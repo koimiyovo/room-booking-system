@@ -52,22 +52,26 @@ class RoomControllerIntegrationTest
 
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "Admin",
-                "admin@test.com",
-                passwordEncoder.encode("admin123")!!,
-                "ADMIN",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "Admin",
+                email = "admin@test.com",
+                password = passwordEncoder.encode("admin123")!!,
+                role = "ADMIN",
+                registeredAt = OffsetDateTime.now(),
+                status = "CREATED",
+                since = OffsetDateTime.now(),
             )
         )
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "User",
-                "user@test.com",
-                passwordEncoder.encode("user123")!!,
-                "USER",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "User",
+                email = "user@test.com",
+                password = passwordEncoder.encode("user123")!!,
+                role = "USER",
+                registeredAt = OffsetDateTime.now(),
+                status = "CREATED",
+                since = OffsetDateTime.now(),
             )
         )
 
