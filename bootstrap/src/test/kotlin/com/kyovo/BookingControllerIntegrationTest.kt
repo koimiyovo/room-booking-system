@@ -1,6 +1,5 @@
 package com.kyovo
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.kyovo.adapter.persistence.entity.UserEntity
 import com.kyovo.adapter.persistence.repository.BookingJpaRepository
 import com.kyovo.adapter.persistence.repository.RoomJpaRepository
@@ -10,15 +9,16 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
+import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
-import java.util.UUID
+import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -53,7 +53,15 @@ class BookingControllerIntegrationTest
         roomJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
-        userJpaRepository.save(UserEntity(UUID.randomUUID(), "Admin", "admin@test.com", encoder.encode("admin123"), "ADMIN"))
+        userJpaRepository.save(
+            UserEntity(
+                UUID.randomUUID(),
+                "Admin",
+                "admin@test.com",
+                encoder.encode("admin123")!!,
+                "ADMIN"
+            )
+        )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
 
         val aliceResult = mockMvc.post("/api/auth/register") {
@@ -94,7 +102,14 @@ class BookingControllerIntegrationTest
     fun `POST then GET api-bookings returns the created booking`()
     {
         val roomId = createRoom()
-        val request = CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 3), 5, "Projector needed")
+        val request = CreateBookingRequest(
+            roomId,
+            aliceId,
+            LocalDate.of(2026, 6, 1),
+            LocalDate.of(2026, 6, 3),
+            5,
+            "Projector needed"
+        )
 
         val postResult = mockMvc.post("/api/bookings") {
             contentType = MediaType.APPLICATION_JSON
@@ -123,7 +138,14 @@ class BookingControllerIntegrationTest
     @Test
     fun `POST api-bookings returns 404 when room does not exist`()
     {
-        val request = CreateBookingRequest(UUID.randomUUID(), aliceId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 3), 5, null)
+        val request = CreateBookingRequest(
+            UUID.randomUUID(),
+            aliceId,
+            LocalDate.of(2026, 6, 1),
+            LocalDate.of(2026, 6, 3),
+            5,
+            null
+        )
 
         mockMvc.post("/api/bookings") {
             contentType = MediaType.APPLICATION_JSON
@@ -138,7 +160,8 @@ class BookingControllerIntegrationTest
     fun `POST api-bookings returns 400 when capacity is exceeded`()
     {
         val roomId = createRoom(capacity = 5)
-        val request = CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 3), 10, null)
+        val request =
+            CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 3), 10, null)
 
         mockMvc.post("/api/bookings") {
             contentType = MediaType.APPLICATION_JSON
@@ -161,7 +184,8 @@ class BookingControllerIntegrationTest
             header("Authorization", "Bearer $aliceToken")
         }.andExpect { status { isCreated() } }
 
-        val overlapping = CreateBookingRequest(roomId, bobId, LocalDate.of(2026, 6, 3), LocalDate.of(2026, 6, 7), 5, null)
+        val overlapping =
+            CreateBookingRequest(roomId, bobId, LocalDate.of(2026, 6, 3), LocalDate.of(2026, 6, 7), 5, null)
         mockMvc.post("/api/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(overlapping)
@@ -194,7 +218,8 @@ class BookingControllerIntegrationTest
             jsonPath("$.cancellation.reason") { value("No longer needed") }
         }
 
-        val overlapping = CreateBookingRequest(roomId, bobId, LocalDate.of(2026, 6, 3), LocalDate.of(2026, 6, 7), 5, null)
+        val overlapping =
+            CreateBookingRequest(roomId, bobId, LocalDate.of(2026, 6, 3), LocalDate.of(2026, 6, 7), 5, null)
         mockMvc.post("/api/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(overlapping)

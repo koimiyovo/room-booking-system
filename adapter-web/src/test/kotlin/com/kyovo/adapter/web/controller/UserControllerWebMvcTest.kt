@@ -1,6 +1,5 @@
 package com.kyovo.adapter.web.controller
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.kyovo.adapter.web.dto.UpdateUserRequest
 import com.kyovo.adapter.web.security.JwtService
 import com.kyovo.domain.exception.UserNotFoundException
@@ -11,7 +10,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
@@ -20,7 +19,8 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.put
-import java.util.UUID
+import tools.jackson.databind.ObjectMapper
+import java.util.*
 
 @WebMvcTest(UserController::class)
 class UserControllerWebMvcTest
@@ -41,7 +41,8 @@ class UserControllerWebMvcTest
     private lateinit var jwtService: JwtService
 
     private val userId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-    private val user = User(UserId(userId), UserName("Alice"), UserEmail("alice@example.com"), UserPassword("hashed"), UserRole.USER)
+    private val user =
+        User(UserId(userId), UserName("Alice"), UserEmail("alice@example.com"), UserPassword("hashed"), UserRole.USER)
 
     @Test
     @WithMockUser(roles = ["ADMIN"])

@@ -1,10 +1,12 @@
 package com.kyovo.adapter.web.controller
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.kyovo.adapter.web.dto.CancelBookingRequest
 import com.kyovo.adapter.web.dto.CreateBookingRequest
 import com.kyovo.adapter.web.security.JwtService
-import com.kyovo.domain.exception.*
+import com.kyovo.domain.exception.BookingAlreadyCancelledException
+import com.kyovo.domain.exception.BookingConflictException
+import com.kyovo.domain.exception.RoomCapacityExceededException
+import com.kyovo.domain.exception.RoomNotFoundException
 import com.kyovo.domain.model.*
 import com.kyovo.domain.port.primary.BookingUseCase
 import org.junit.jupiter.api.Test
@@ -12,7 +14,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
@@ -20,8 +22,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
+import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
-import java.util.UUID
+import java.util.*
 
 @WebMvcTest(BookingController::class)
 class BookingControllerWebMvcTest
@@ -191,7 +194,8 @@ class BookingControllerWebMvcTest
     @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
     fun `POST api-bookings-id-cancel returns 200 with cancelled booking`()
     {
-        val cancelledBooking = booking.copy(cancellation = Cancellation(UserId(userId), BookingCancellationReason("Change of plans")))
+        val cancelledBooking =
+            booking.copy(cancellation = Cancellation(UserId(userId), BookingCancellationReason("Change of plans")))
         whenever(bookingUseCase.cancel(any(), any(), any(), anyOrNull())).thenReturn(cancelledBooking)
 
         mockMvc.post("/api/bookings/$bookingId/cancel") {

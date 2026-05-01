@@ -1,6 +1,5 @@
 package com.kyovo
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.kyovo.adapter.persistence.entity.UserEntity
 import com.kyovo.adapter.persistence.repository.RoomJpaRepository
 import com.kyovo.adapter.persistence.repository.UserJpaRepository
@@ -10,14 +9,15 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
-import java.util.UUID
+import tools.jackson.databind.ObjectMapper
+import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -45,8 +45,24 @@ class RoomControllerIntegrationTest
         roomJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
-        userJpaRepository.save(UserEntity(UUID.randomUUID(), "Admin", "admin@test.com", encoder.encode("admin123"), "ADMIN"))
-        userJpaRepository.save(UserEntity(UUID.randomUUID(), "User", "user@test.com", encoder.encode("user123"), "USER"))
+        userJpaRepository.save(
+            UserEntity(
+                UUID.randomUUID(),
+                "Admin",
+                "admin@test.com",
+                encoder.encode("admin123")!!,
+                "ADMIN"
+            )
+        )
+        userJpaRepository.save(
+            UserEntity(
+                UUID.randomUUID(),
+                "User",
+                "user@test.com",
+                encoder.encode("user123")!!,
+                "USER"
+            )
+        )
 
         adminToken = loginAndGetToken("admin@test.com", "admin123")
         userToken = loginAndGetToken("user@test.com", "user123")

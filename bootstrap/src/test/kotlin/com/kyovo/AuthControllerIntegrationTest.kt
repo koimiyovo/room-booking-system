@@ -1,6 +1,5 @@
 package com.kyovo
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.kyovo.adapter.persistence.entity.UserEntity
 import com.kyovo.adapter.persistence.repository.UserJpaRepository
 import com.kyovo.adapter.web.dto.LoginRequest
@@ -9,13 +8,14 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
-import java.util.UUID
+import tools.jackson.databind.ObjectMapper
+import java.util.*
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -75,7 +75,7 @@ class AuthControllerIntegrationTest
     fun `POST api-auth-login returns 200 with a valid token`()
     {
         userJpaRepository.save(
-            UserEntity(UUID.randomUUID(), "Alice", "alice@example.com", encoder.encode("password"), "USER")
+            UserEntity(UUID.randomUUID(), "Alice", "alice@example.com", encoder.encode("password")!!, "USER")
         )
 
         val result = mockMvc.post("/api/auth/login") {
@@ -94,7 +94,7 @@ class AuthControllerIntegrationTest
     fun `POST api-auth-login returns 401 when password is wrong`()
     {
         userJpaRepository.save(
-            UserEntity(UUID.randomUUID(), "Alice", "alice@example.com", encoder.encode("password"), "USER")
+            UserEntity(UUID.randomUUID(), "Alice", "alice@example.com", encoder.encode("password")!!, "USER")
         )
 
         mockMvc.post("/api/auth/login") {

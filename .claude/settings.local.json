@@ -22,7 +22,8 @@
       "WebFetch(domain:search.maven.org)",
       "WebFetch(domain:repo1.maven.org)",
       "WebFetch(domain:springdoc.org)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -s \"https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide\")"
     ]
   }
 }

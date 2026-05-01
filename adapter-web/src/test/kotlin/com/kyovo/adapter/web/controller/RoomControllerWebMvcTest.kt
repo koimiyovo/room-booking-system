@@ -1,6 +1,5 @@
 package com.kyovo.adapter.web.controller
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.kyovo.adapter.web.dto.CreateRoomRequest
 import com.kyovo.adapter.web.security.JwtService
 import com.kyovo.domain.model.*
@@ -10,7 +9,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
@@ -18,7 +17,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
-import java.util.UUID
+import tools.jackson.databind.ObjectMapper
+import java.util.*
 
 @WebMvcTest(RoomController::class)
 @WithMockUser(roles = ["ADMIN"])

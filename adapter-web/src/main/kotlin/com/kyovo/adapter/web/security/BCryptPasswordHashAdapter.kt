@@ -10,7 +10,8 @@ class BCryptPasswordHashAdapter(private val encoder: PasswordEncoder) : Password
 {
     override fun hash(raw: String): UserPassword
     {
-        return UserPassword(encoder.encode(raw))
+        val encoded = encoder.encode(raw) ?: error("Cannot encode user password")
+        return UserPassword(encoded)
     }
 
     override fun matches(raw: String, hashed: UserPassword): Boolean
