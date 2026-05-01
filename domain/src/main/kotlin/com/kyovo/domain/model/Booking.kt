@@ -7,5 +7,13 @@ data class Booking(
     val startDate: BookingStartDate,
     val endDate: BookingEndDate,
     val numberOfPeople: BookingNumberOfPeople,
-    val specialRequests: BookingSpecialRequests?
+    val specialRequests: BookingSpecialRequests?,
+    val cancellation: Cancellation?
 )
+{
+    val status: BookingStatus
+        get()
+        {
+            return if (cancellation == null) BookingStatus.CONFIRMED else BookingStatus.CANCELLED
+        }
+}

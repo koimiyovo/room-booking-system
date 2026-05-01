@@ -11,6 +11,6 @@ data class NewBooking(
 {
     fun toBooking(): Booking
     {
-        return Booking(BookingId.generate(), roomId, userId, startDate, endDate, numberOfPeople, specialRequests)
+        return Booking(BookingId.generate(), roomId, userId, startDate, endDate, numberOfPeople, specialRequests, null)
     }
 }

@@ -1,11 +1,7 @@
 package com.kyovo.domain.service
 
-import com.kyovo.domain.exception.BookingConflictException
-import com.kyovo.domain.exception.RoomCapacityExceededException
-import com.kyovo.domain.exception.RoomNotFoundException
-import com.kyovo.domain.model.Booking
-import com.kyovo.domain.model.BookingId
-import com.kyovo.domain.model.NewBooking
+import com.kyovo.domain.exception.*
+import com.kyovo.domain.model.*
 import com.kyovo.domain.port.primary.BookingUseCase
 import com.kyovo.domain.port.secondary.BookingRepository
 import com.kyovo.domain.port.secondary.RoomRepository
@@ -27,6 +23,11 @@ class BookingService(
         return bookingRepository.findById(id)
     }
 
+    override fun findByUserId(userId: UserId): List<Booking>
+    {
+        return bookingRepository.findByUserId(userId)
+    }
+
     override fun create(newBooking: NewBooking): Booking
     {
         return transactionPort.executeInTransaction {
@@ -40,6 +41,17 @@ class BookingService(
                 throw BookingConflictException(newBooking.roomId, newBooking.startDate, newBooking.endDate)
 
             bookingRepository.save(newBooking.toBooking())
+        }
+    }
+
+    override fun cancel(bookingId: BookingId, cancelledBy: UserId, isAdmin: Boolean, reason: BookingCancellationReason?): Booking
+    {
+        return transactionPort.executeInTransaction {
+            val booking = bookingRepository.findById(bookingId) ?: throw BookingNotFoundException(bookingId)
+            if (!isAdmin && booking.userId != cancelledBy)
+                throw BookingNotOwnedByUserException(bookingId, cancelledBy)
+            if (booking.cancellation != null) throw BookingAlreadyCancelledException(bookingId)
+            bookingRepository.update(booking.copy(cancellation = Cancellation(cancelledBy, reason)))
         }
     }
 }

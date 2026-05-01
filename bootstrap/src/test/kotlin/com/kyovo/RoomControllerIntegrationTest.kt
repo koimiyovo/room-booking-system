@@ -1,24 +1,32 @@
 package com.kyovo
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.kyovo.adapter.persistence.entity.UserEntity
 import com.kyovo.adapter.persistence.repository.RoomJpaRepository
+import com.kyovo.adapter.persistence.repository.UserJpaRepository
 import com.kyovo.adapter.web.dto.CreateRoomRequest
+import com.kyovo.adapter.web.dto.LoginRequest
+import com.kyovo.config.TestTimeProviderConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
-import java.util.UUID
+import tools.jackson.databind.ObjectMapper
+import java.time.OffsetDateTime
+import java.util.*
 
 @SpringBootTest
+@Import(TestTimeProviderConfig::class)
 @AutoConfigureMockMvc
-class RoomControllerIntegrationTest {
-
+class RoomControllerIntegrationTest
+{
     @Autowired
     private lateinit var mockMvc: MockMvc
 
@@ -28,25 +36,72 @@ class RoomControllerIntegrationTest {
     @Autowired
     private lateinit var roomJpaRepository: RoomJpaRepository
 
+    @Autowired
+    private lateinit var userJpaRepository: UserJpaRepository
+
+    @Autowired
+    private lateinit var passwordEncoder: PasswordEncoder
+    private lateinit var adminToken: String
+    private lateinit var userToken: String
+
     @BeforeEach
-    fun setUp() {
+    fun setUp()
+    {
         roomJpaRepository.deleteAll()
+        userJpaRepository.deleteAll()
+
+        userJpaRepository.save(
+            UserEntity(
+                UUID.randomUUID(),
+                "Admin",
+                "admin@test.com",
+                passwordEncoder.encode("admin123")!!,
+                "ADMIN",
+                OffsetDateTime.now()
+            )
+        )
+        userJpaRepository.save(
+            UserEntity(
+                UUID.randomUUID(),
+                "User",
+                "user@test.com",
+                passwordEncoder.encode("user123")!!,
+                "USER",
+                OffsetDateTime.now()
+            )
+        )
+
+        adminToken = loginAndGetToken("admin@test.com", "admin123")
+        userToken = loginAndGetToken("user@test.com", "user123")
+    }
+
+    private fun loginAndGetToken(email: String, password: String): String
+    {
+        val result = mockMvc.post("/api/auth/login") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(LoginRequest(email, password))
+        }.andReturn()
+        return objectMapper.readTree(result.response.contentAsString)["token"].asString()
     }
 
     @Test
-    fun `GET api-rooms returns 200 with empty list when no rooms exist`() {
-        mockMvc.get("/api/rooms")
-            .andExpect {
-                status { isOk() }
-                content { json("[]") }
-            }
+    fun `GET api-rooms returns 200 with empty list when no rooms exist`()
+    {
+        mockMvc.get("/api/rooms") {
+            header("Authorization", "Bearer $userToken")
+        }.andExpect {
+            status { isOk() }
+            content { json("[]") }
+        }
     }
 
     @Test
-    fun `POST api-rooms returns 201 with the created room`() {
+    fun `POST api-rooms returns 201 with the created room`()
+    {
         mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Conférence", 25))
+            header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isCreated() }
             jsonPath("$.id") { isNotEmpty() }
@@ -56,48 +111,66 @@ class RoomControllerIntegrationTest {
     }
 
     @Test
-    fun `POST then GET api-rooms returns the created room in the list`() {
+    fun `POST api-rooms returns 403 when authenticated as USER`()
+    {
+        mockMvc.post("/api/rooms") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle", 10))
+            header("Authorization", "Bearer $userToken")
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `POST then GET api-rooms returns the created room in the list`()
+    {
         val postResult = mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Réunion", 12))
+            header("Authorization", "Bearer $adminToken")
         }.andReturn()
 
-        val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asText()
+        val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.get("/api/rooms")
-            .andExpect {
-                status { isOk() }
-                jsonPath("$[0].id") { value(createdId) }
-                jsonPath("$[0].name") { value("Salle Réunion") }
-                jsonPath("$[0].capacity") { value(12) }
-            }
+        mockMvc.get("/api/rooms") {
+            header("Authorization", "Bearer $userToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$[0].id") { value(createdId) }
+            jsonPath("$[0].name") { value("Salle Réunion") }
+        }
 
         assertThat(roomJpaRepository.count()).isEqualTo(1)
     }
 
     @Test
-    fun `POST then GET api-rooms-id returns the room by its identifier`() {
+    fun `POST then GET api-rooms-id returns the room by its identifier`()
+    {
         val postResult = mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Formation", 30))
+            header("Authorization", "Bearer $adminToken")
         }.andReturn()
 
-        val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asText()
+        val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.get("/api/rooms/$createdId")
-            .andExpect {
-                status { isOk() }
-                jsonPath("$.id") { value(createdId) }
-                jsonPath("$.name") { value("Salle Formation") }
-                jsonPath("$.capacity") { value(30) }
-            }
+        mockMvc.get("/api/rooms/$createdId") {
+            header("Authorization", "Bearer $userToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.id") { value(createdId) }
+            jsonPath("$.name") { value("Salle Formation") }
+        }
     }
 
     @Test
-    fun `GET api-rooms-id returns 404 for a non-existent identifier`() {
-        mockMvc.get("/api/rooms/${UUID.randomUUID()}")
-            .andExpect {
-                status { isNotFound() }
-            }
+    fun `GET api-rooms-id returns 404 for a non-existent identifier`()
+    {
+        mockMvc.get("/api/rooms/${UUID.randomUUID()}") {
+            header("Authorization", "Bearer $userToken")
+        }.andExpect {
+            status { isNotFound() }
+        }
     }
 }

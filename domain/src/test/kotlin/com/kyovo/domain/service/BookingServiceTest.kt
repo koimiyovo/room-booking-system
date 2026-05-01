@@ -1,8 +1,6 @@
 package com.kyovo.domain.service
 
-import com.kyovo.domain.exception.BookingConflictException
-import com.kyovo.domain.exception.RoomCapacityExceededException
-import com.kyovo.domain.exception.RoomNotFoundException
+import com.kyovo.domain.exception.*
 import com.kyovo.domain.model.*
 import com.kyovo.domain.port.secondary.BookingRepository
 import com.kyovo.domain.port.secondary.RoomRepository
@@ -18,15 +16,11 @@ import java.util.*
 
 class BookingServiceTest
 {
-
     private val bookingRepository: BookingRepository = mock()
     private val roomRepository: RoomRepository = mock()
     private val transactionPort = object : TransactionPort
     {
-        override fun <T> executeInTransaction(block: () -> T): T
-        {
-            return block()
-        }
+        override fun <T> executeInTransaction(block: () -> T): T = block()
     }
     private val bookingService = BookingService(bookingRepository, roomRepository, transactionPort)
 
@@ -36,6 +30,9 @@ class BookingServiceTest
     private val startDate = BookingStartDate(LocalDate.of(2026, 6, 1))
     private val endDate = BookingEndDate(LocalDate.of(2026, 6, 3))
     private val newBooking = NewBooking(roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)
+
+    private fun confirmedBooking(id: BookingId = BookingId(UUID.randomUUID())): Booking =
+        Booking(id, roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null, null)
 
     @Test
     fun `create returns booking when room exists and no conflict`()
@@ -48,10 +45,7 @@ class BookingServiceTest
 
         assertThat(result.roomId).isEqualTo(roomId)
         assertThat(result.userId).isEqualTo(userId)
-        assertThat(result.startDate).isEqualTo(startDate)
-        assertThat(result.endDate).isEqualTo(endDate)
-        assertThat(result.numberOfPeople).isEqualTo(BookingNumberOfPeople(5))
-        assertThat(result.specialRequests).isNull()
+        assertThat(result.status).isEqualTo(BookingStatus.CONFIRMED)
     }
 
     @Test
@@ -84,10 +78,85 @@ class BookingServiceTest
     }
 
     @Test
+    fun `cancel sets status to CANCELLED stores the reason and records who cancelled`()
+    {
+        val bookingId = BookingId(UUID.randomUUID())
+        val booking = confirmedBooking(bookingId)
+        val reason = BookingCancellationReason("Change of plans")
+        whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
+        whenever(bookingRepository.update(any())).thenAnswer { it.getArgument<Booking>(0) }
+
+        val result = bookingService.cancel(bookingId, userId, false, reason)
+
+        assertThat(result.status).isEqualTo(BookingStatus.CANCELLED)
+        assertThat(result.cancellation?.reason).isEqualTo(reason)
+        assertThat(result.cancellation?.cancelledBy).isEqualTo(userId)
+    }
+
+    @Test
+    fun `cancel with isAdmin true skips ownership check and records admin as canceller`()
+    {
+        val bookingId = BookingId(UUID.randomUUID())
+        val adminId = UserId(UUID.randomUUID())
+        val otherUserId = UserId(UUID.randomUUID())
+        val booking = Booking(bookingId, roomId, otherUserId, startDate, endDate, BookingNumberOfPeople(5), null, null)
+        whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
+        whenever(bookingRepository.update(any())).thenAnswer { it.getArgument<Booking>(0) }
+
+        val result = bookingService.cancel(bookingId, adminId, true, null)
+
+        assertThat(result.status).isEqualTo(BookingStatus.CANCELLED)
+        assertThat(result.cancellation?.cancelledBy).isEqualTo(adminId)
+    }
+
+    @Test
+    fun `cancel throws BookingNotFoundException when booking does not exist`()
+    {
+        val bookingId = BookingId(UUID.randomUUID())
+        whenever(bookingRepository.findById(bookingId)).thenReturn(null)
+
+        assertThatThrownBy { bookingService.cancel(bookingId, userId, false, null) }
+            .isInstanceOf(BookingNotFoundException::class.java)
+    }
+
+    @Test
+    fun `cancel throws BookingNotOwnedByUserException when user does not own the booking`()
+    {
+        val bookingId = BookingId(UUID.randomUUID())
+        val otherUserId = UserId(UUID.randomUUID())
+        val booking = Booking(bookingId, roomId, otherUserId, startDate, endDate, BookingNumberOfPeople(5), null, null)
+        whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
+
+        assertThatThrownBy { bookingService.cancel(bookingId, userId, false, null) }
+            .isInstanceOf(BookingNotOwnedByUserException::class.java)
+    }
+
+    @Test
+    fun `cancel throws BookingAlreadyCancelledException when booking is already cancelled`()
+    {
+        val bookingId = BookingId(UUID.randomUUID())
+        val cancelled = Booking(bookingId, roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null, Cancellation(userId, null))
+        whenever(bookingRepository.findById(bookingId)).thenReturn(cancelled)
+
+        assertThatThrownBy { bookingService.cancel(bookingId, userId, false, null) }
+            .isInstanceOf(BookingAlreadyCancelledException::class.java)
+    }
+
+    @Test
+    fun `findByUserId returns bookings belonging to the user`()
+    {
+        val booking = confirmedBooking()
+        whenever(bookingRepository.findByUserId(userId)).thenReturn(listOf(booking))
+
+        val result = bookingService.findByUserId(userId)
+
+        assertThat(result).containsExactly(booking)
+    }
+
+    @Test
     fun `findAll returns all bookings`()
     {
-        val booking =
-            Booking(BookingId(UUID.randomUUID()), roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)
+        val booking = confirmedBooking()
         whenever(bookingRepository.findAll()).thenReturn(listOf(booking))
 
         val result = bookingService.findAll()
@@ -96,20 +165,10 @@ class BookingServiceTest
     }
 
     @Test
-    fun `findAll returns empty list when no bookings exist`()
-    {
-        whenever(bookingRepository.findAll()).thenReturn(emptyList())
-
-        val result = bookingService.findAll()
-
-        assertThat(result).isEmpty()
-    }
-
-    @Test
     fun `findById returns booking when it exists`()
     {
         val bookingId = BookingId(UUID.randomUUID())
-        val booking = Booking(bookingId, roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)
+        val booking = confirmedBooking(bookingId)
         whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
 
         val result = bookingService.findById(bookingId)

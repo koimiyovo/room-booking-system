@@ -1,7 +1,30 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mvn clean *)"
+      "Bash(mvn clean *)",
+      "Bash(mvn test *)",
+      "Bash(curl -s \"https://search.maven.org/solrsearch/select?q=g:org.jetbrains.kotlin+AND+a:kotlin-stdlib&core=gav&rows=10&wt=json\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s \"https://search.maven.org/solrsearch/select?q=g:com.fasterxml.uuid+AND+a:java-uuid-generator&core=gav&rows=5&wt=json\")",
+      "Bash(curl -s \"https://search.maven.org/solrsearch/select?q=g:org.mockito.kotlin+AND+a:mockito-kotlin&core=gav&rows=5&wt=json\")",
+      "Bash(curl -s \"https://search.maven.org/solrsearch/select?q=g:org.springdoc+AND+a:springdoc-openapi-starter-webmvc-ui&core=gav&rows=5&wt=json\")",
+      "Bash(curl -s \"https://search.maven.org/solrsearch/select?q=g:io.jsonwebtoken+AND+a:jjwt-api&core=gav&rows=5&wt=json\")",
+      "Bash(curl -s \"https://search.maven.org/solrsearch/select?q=g:com.tngtech.archunit+AND+a:archunit-junit5&core=gav&rows=5&wt=json\")",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:central.sonatype.com)",
+      "WebFetch(domain:security.snyk.io)",
+      "WebFetch(domain:osv.dev)",
+      "WebFetch(domain:spring.io)",
+      "Bash(curl -s \"https://api.github.com/repos/springdoc/springdoc-openapi/releases?per_page=20\")",
+      "Bash(python3 -c ' *)",
+      "WebFetch(domain:mvnrepository.com)",
+      "WebFetch(domain:search.maven.org)",
+      "WebFetch(domain:repo1.maven.org)",
+      "WebFetch(domain:springdoc.org)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl -s \"https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide\")",
+      "Bash(git mv *)"
     ]
   }
 }

@@ -8,5 +8,7 @@ interface UserUseCase
 
     fun findById(id: UserId): User?
 
-    fun save(newUser: NewUser): User
+    fun update(id: UserId, data: UpdateUser): User
+
+    fun delete(id: UserId)
 }
