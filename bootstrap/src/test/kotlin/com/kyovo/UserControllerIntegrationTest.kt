@@ -115,6 +115,27 @@ class UserControllerIntegrationTest
     }
 
     @Test
+    fun `GET api-users-id returns 500 when user role is invalid`()
+    {
+        val savedUser = userJpaRepository.save(
+            UserEntity(
+                UUID.randomUUID(),
+                "Alice",
+                "alice@example.com",
+                passwordEncoder.encode("password")!!,
+                "INVALID_ROLE",
+                OffsetDateTime.now()
+            )
+        )
+
+        mockMvc.get("/api/users/${savedUser.id}") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isInternalServerError() }
+        }
+    }
+
+    @Test
     fun `PUT api-users-id returns 200 when user updates own account`()
     {
         mockMvc.put("/api/users/$aliceId") {

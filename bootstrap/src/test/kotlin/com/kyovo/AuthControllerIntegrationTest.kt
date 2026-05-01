@@ -90,7 +90,11 @@ class AuthControllerIntegrationTest
     {
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(), "Alice", "alice@example.com", passwordEncoder.encode("password")!!, "USER",
+                UUID.randomUUID(),
+                "Alice",
+                "alice@example.com",
+                passwordEncoder.encode("password")!!,
+                "USER",
                 OffsetDateTime.now()
             )
         )
@@ -112,7 +116,11 @@ class AuthControllerIntegrationTest
     {
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(), "Alice", "alice@example.com", passwordEncoder.encode("password")!!, "USER",
+                UUID.randomUUID(),
+                "Alice",
+                "alice@example.com",
+                passwordEncoder.encode("password")!!,
+                "USER",
                 OffsetDateTime.now()
             )
         )

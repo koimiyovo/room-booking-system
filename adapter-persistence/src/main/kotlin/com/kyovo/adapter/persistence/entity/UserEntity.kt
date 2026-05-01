@@ -52,7 +52,7 @@ class UserEntity(
             name = UserName(name),
             email = UserEmail(email),
             password = UserPassword(password),
-            role = UserRole.valueOf(role), //TODO secure
+            role = UserRole.from(role),
             registeredAt = UserRegistrationDate(registeredAt)
         )
     }

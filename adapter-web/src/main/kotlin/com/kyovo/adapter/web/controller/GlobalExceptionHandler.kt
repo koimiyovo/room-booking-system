@@ -62,4 +62,10 @@ class GlobalExceptionHandler
     {
         return ResponseEntity(ex.message, HttpStatus.CONFLICT)
     }
+
+    @ExceptionHandler(InvalidRoleException::class)
+    fun handleInvalidRole(ex: InvalidRoleException): ResponseEntity<String>
+    {
+        return ResponseEntity.status(500).body(ex.message)
+    }
 }
