@@ -52,6 +52,7 @@ class AuthServiceTest
 
         verify(userRepository).save(captor.capture())
         assertThat(captor.firstValue.password).isEqualTo(UserPassword("hashed"))
+        verify(userRepository).saveStatusHistory(any(), any(), any())
     }
 
     @Test
@@ -65,6 +66,7 @@ class AuthServiceTest
         val result = authService.register(newUser)
 
         assertThat(result).isEqualTo(existingUser)
+        verify(userRepository).saveStatusHistory(any(), any(), any())
     }
 
     @Test

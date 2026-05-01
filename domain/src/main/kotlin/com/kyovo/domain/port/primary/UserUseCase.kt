@@ -13,4 +13,6 @@ interface UserUseCase
     fun update(id: UserId, data: UpdateUser): User
 
     fun delete(id: UserId)
+
+    fun validate(id: UserId, isAdmin: Boolean, validateBy: UserId): User
 }

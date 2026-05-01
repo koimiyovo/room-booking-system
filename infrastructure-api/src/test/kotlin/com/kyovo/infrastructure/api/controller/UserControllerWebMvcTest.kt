@@ -1,5 +1,7 @@
 package com.kyovo.infrastructure.api.controller
 
+import com.kyovo.domain.exception.AccountNotOwnedByUserException
+import com.kyovo.domain.exception.UserAlreadyActiveException
 import com.kyovo.domain.exception.UserNotFoundException
 import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.primary.UserUseCase
@@ -18,6 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.delete
 import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
 import org.springframework.test.web.servlet.put
 import tools.jackson.databind.ObjectMapper
 import java.time.OffsetDateTime
@@ -173,6 +176,60 @@ class UserControllerWebMvcTest
             with(csrf())
         }.andExpect {
             status { isForbidden() }
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000", roles = ["USER"])
+    fun `POST api-users-id-validate returns 200 when user validates own account`()
+    {
+        val activeUser = user.copy(
+            statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+        )
+        whenever(userUseCase.validate(any(), any(), any())).thenReturn(activeUser)
+
+        mockMvc.post("/api/users/$userId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.id") { value(userId.toString()) }
+            jsonPath("$.status_info.status") { value("ACTIVE") }
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "99999999-9999-9999-9999-999999999999", roles = ["USER"])
+    fun `POST api-users-id-validate returns 403 when non-admin user validates another account`()
+    {
+        whenever(userUseCase.validate(any(), any(), any())).thenThrow(AccountNotOwnedByUserException())
+
+        mockMvc.post("/api/users/$userId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000", roles = ["USER"])
+    fun `POST api-users-id-validate returns 409 when account is already active`()
+    {
+        whenever(userUseCase.validate(any(), any(), any())).thenThrow(UserAlreadyActiveException(UserId(userId)))
+
+        mockMvc.post("/api/users/$userId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-validate returns 401 when unauthenticated`()
+    {
+        mockMvc.post("/api/users/$userId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isUnauthorized() }
         }
     }
 }

@@ -3,6 +3,8 @@ package com.kyovo.domain.port.secondary
 import com.kyovo.domain.model.user.User
 import com.kyovo.domain.model.user.UserEmail
 import com.kyovo.domain.model.user.UserId
+import com.kyovo.domain.model.user.UserStatus
+import com.kyovo.domain.model.user.UserStatusInfoDate
 
 interface UserRepository
 {
@@ -15,4 +17,8 @@ interface UserRepository
     fun save(user: User): User
 
     fun deleteById(id: UserId)
+
+    fun update(user: User): User
+
+    fun saveStatusHistory(userId: UserId, status: UserStatus, since: UserStatusInfoDate)
 }

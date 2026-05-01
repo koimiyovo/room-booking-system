@@ -21,7 +21,9 @@ class AuthService(
     {
         if (userRepository.findByEmail(newUser.email) != null) throw EmailAlreadyUsedException(newUser.email)
         val hashed = newUser.copy(password = passwordHashPort.hash(newUser.password.value))
-        return userRepository.save(hashed.toUser(UserRegistrationDate(clockPort.now())))
+        val user = userRepository.save(hashed.toUser(UserRegistrationDate(clockPort.now())))
+        userRepository.saveStatusHistory(user.id, user.statusInfo.status, user.statusInfo.since)
+        return user
     }
 
     override fun login(email: UserEmail, rawPassword: String): User

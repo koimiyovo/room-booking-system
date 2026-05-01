@@ -4,7 +4,8 @@ import com.kyovo.domain.model.user.UserStatus
 
 enum class UserStatusResponse
 {
-    CREATED;
+    CREATED,
+    ACTIVE;
 
     companion object
     {
@@ -13,6 +14,7 @@ enum class UserStatusResponse
             return when (status)
             {
                 UserStatus.CREATED -> CREATED
+                UserStatus.ACTIVE -> ACTIVE
             }
         }
     }

@@ -91,6 +91,28 @@ class UserController(private val userUseCase: UserUseCase)
         return ResponseEntity.noContent().build()
     }
 
+    @PostMapping("/{id}/validate")
+    @Operation(summary = "Validate a user account")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Account validated successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Access denied"),
+        ApiResponse(responseCode = "404", description = "User not found"),
+        ApiResponse(responseCode = "409", description = "Account is already active")
+    )
+    fun validate(
+        @Parameter(description = "UUID identifier of the user")
+        @PathVariable id: UUID,
+        authentication: Authentication
+    ): ResponseEntity<UserResponse>
+    {
+        val targetId = UserId(id)
+        val isAdmin = authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }
+        val validateBy = UserId(UUID.fromString(authentication.name))
+        val user = userUseCase.validate(targetId, isAdmin, validateBy)
+        return ResponseEntity.ok(UserResponse.fromDomain(user))
+    }
+
     private fun isAdminOrOwner(authentication: Authentication, targetId: UserId): Boolean
     {
         if (authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }) return true

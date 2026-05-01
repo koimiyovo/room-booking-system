@@ -4,3 +4,9 @@ data class UserStatusInfo(
     val status: UserStatus,
     val since: UserStatusInfoDate
 )
+{
+    fun isActive(): Boolean
+    {
+        return status == UserStatus.ACTIVE
+    }
+}

@@ -1,17 +1,21 @@
 package com.kyovo.domain.service
 
+import com.kyovo.domain.exception.AccountNotOwnedByUserException
 import com.kyovo.domain.exception.EmailAlreadyUsedException
+import com.kyovo.domain.exception.UserAlreadyActiveException
 import com.kyovo.domain.exception.UserNotFoundException
-import com.kyovo.domain.model.user.UpdateUser
-import com.kyovo.domain.model.user.User
-import com.kyovo.domain.model.user.UserId
+import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.primary.UserUseCase
+import com.kyovo.domain.port.secondary.ClockPort
 import com.kyovo.domain.port.secondary.PasswordHashPort
+import com.kyovo.domain.port.secondary.TransactionPort
 import com.kyovo.domain.port.secondary.UserRepository
 
 class UserService(
     private val userRepository: UserRepository,
-    private val passwordHashPort: PasswordHashPort
+    private val passwordHashPort: PasswordHashPort,
+    private val transactionPort: TransactionPort,
+    private val clockPort: ClockPort
 ) : UserUseCase
 {
     override fun findAll(): List<User>
@@ -43,5 +47,29 @@ class UserService(
     {
         if (userRepository.findById(id) == null) throw UserNotFoundException(id)
         userRepository.deleteById(id)
+    }
+
+    override fun validate(id: UserId, isAdmin: Boolean, validateBy: UserId): User
+    {
+        return transactionPort.executeInTransaction {
+            val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
+
+            if (!isAdmin && user.id != validateBy)
+                throw AccountNotOwnedByUserException()
+
+            if (user.isActive())
+                throw UserAlreadyActiveException(id)
+
+            val updatedUser = userRepository.update(
+                user.copy(
+                    statusInfo = UserStatusInfo(
+                        status = UserStatus.ACTIVE,
+                        since = UserStatusInfoDate(clockPort.now())
+                    )
+                )
+            )
+            userRepository.saveStatusHistory(updatedUser.id, updatedUser.statusInfo.status, updatedUser.statusInfo.since)
+            updatedUser
+        }
     }
 }

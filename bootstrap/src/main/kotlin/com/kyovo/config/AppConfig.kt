@@ -35,9 +35,14 @@ class AppConfig
     }
 
     @Bean
-    fun userUseCase(userRepository: UserRepository, passwordHashPort: PasswordHashPort): UserService
+    fun userUseCase(
+        userRepository: UserRepository,
+        passwordHashPort: PasswordHashPort,
+        transactionPort: TransactionPort,
+        clockPort: ClockPort
+    ): UserService
     {
-        return UserService(userRepository, passwordHashPort)
+        return UserService(userRepository, passwordHashPort, transactionPort, clockPort)
     }
 
     @Bean

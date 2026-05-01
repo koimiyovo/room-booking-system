@@ -6,6 +6,7 @@ import com.kyovo.infrastructure.api.dto.RegisterRequest
 import com.kyovo.infrastructure.api.dto.UpdateUserRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
+import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
 import com.kyovo.infrastructure.provider.MutableTimeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -38,6 +39,9 @@ class UserControllerIntegrationTest
     private lateinit var userJpaRepository: UserJpaRepository
 
     @Autowired
+    private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var aliceToken: String
@@ -51,6 +55,7 @@ class UserControllerIntegrationTest
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 2, 1, 10, 0), ZoneOffset.UTC))
 
+        userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
         userJpaRepository.save(
@@ -234,6 +239,97 @@ class UserControllerIntegrationTest
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-validate returns 200 and transitions status to ACTIVE`()
+    {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
+
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.id") { value(aliceId) }
+            jsonPath("$.status_info.status") { value("ACTIVE") }
+            jsonPath("$.status_info.since") { value("2026-03-01T12:00:00Z") }
+        }
+
+        val entity = userJpaRepository.findById(UUID.fromString(aliceId)).orElseThrow()
+        assertThat(entity.status).isEqualTo("ACTIVE")
+    }
+
+    @Test
+    fun `POST api-users-id-validate records status history with closed CREATED entry and new ACTIVE entry`()
+    {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
+
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isOk() }
+        }
+
+        val registrationTime = OffsetDateTime.of(LocalDateTime.of(2026, 2, 1, 10, 0), ZoneOffset.UTC)
+        val validationTime = OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC)
+
+        val history = userStatusHistoryJpaRepository.findAllByUserId(UUID.fromString(aliceId))
+            .sortedBy { it.since }
+        assertThat(history).hasSize(2)
+
+        val createdEntry = history[0]
+        assertThat(createdEntry.status).isEqualTo("CREATED")
+        assertThat(createdEntry.since).isEqualTo(registrationTime)
+        assertThat(createdEntry.until).isEqualTo(validationTime)
+
+        val activeEntry = history[1]
+        assertThat(activeEntry.status).isEqualTo("ACTIVE")
+        assertThat(activeEntry.since).isEqualTo(validationTime)
+        assertThat(activeEntry.until).isNull()
+    }
+
+    @Test
+    fun `POST api-users-id-validate returns 403 when non-admin user validates another account`()
+    {
+        val otherResult = mockMvc.post("/api/auth/register") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(RegisterRequest("Bob", "bob@test.com", "bob123"))
+        }.andReturn()
+        val bobId = objectMapper.readTree(otherResult.response.contentAsString)["id"].asString()
+
+        mockMvc.post("/api/users/$bobId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-validate returns 409 when account is already active`()
+    {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect { status { isOk() } }
+
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-validate returns 200 when admin validates a user`()
+    {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
+
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status_info.status") { value("ACTIVE") }
         }
     }
 }

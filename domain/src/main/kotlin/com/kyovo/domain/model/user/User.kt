@@ -9,3 +9,9 @@ data class User(
     val registeredAt: UserRegistrationDate,
     val statusInfo: UserStatusInfo
 )
+{
+    fun isActive(): Boolean
+    {
+        return statusInfo.isActive()
+    }
+}
