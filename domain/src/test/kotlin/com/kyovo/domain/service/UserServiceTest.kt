@@ -8,17 +8,32 @@ import com.kyovo.domain.port.secondary.UserRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.*
-import java.util.UUID
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.util.*
 
 class UserServiceTest
 {
     private val userRepository: UserRepository = mock()
     private val passwordHashPort: PasswordHashPort = mock()
     private val userService = UserService(userRepository, passwordHashPort)
+    private val fixedClock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC)
 
     private val userId = UserId(UUID.randomUUID())
-    private val existingUser = User(userId, UserName("Alice"), UserEmail("alice@example.com"), UserPassword("hashed"), UserRole.USER)
+    private val existingUser = User(
+        userId,
+        UserName("Alice"),
+        UserEmail("alice@example.com"),
+        UserPassword("hashed"),
+        UserRole.USER,
+        UserRegistrationDate(LocalDateTime.now(fixedClock))
+    )
 
     @Test
     fun `findAll returns all users from the repository`()

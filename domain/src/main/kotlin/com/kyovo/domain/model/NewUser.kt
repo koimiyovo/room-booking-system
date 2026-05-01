@@ -7,8 +7,8 @@ data class NewUser(
     val role: UserRole = UserRole.USER
 )
 {
-    fun toUser(): User
+    fun toUser(registrationDate: UserRegistrationDate): User
     {
-        return User(UserId.generate(), name, email, password, role)
+        return User(UserId.generate(), name, email, password, role, registrationDate)
     }
 }

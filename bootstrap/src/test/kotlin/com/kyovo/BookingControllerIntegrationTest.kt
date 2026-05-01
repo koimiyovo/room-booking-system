@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.*
 
 @SpringBootTest
@@ -60,7 +61,8 @@ class BookingControllerIntegrationTest
                 "Admin",
                 "admin@test.com",
                 passwordEncoder.encode("admin123")!!,
-                "ADMIN"
+                "ADMIN",
+                LocalDateTime.now()
             )
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
@@ -69,14 +71,14 @@ class BookingControllerIntegrationTest
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Alice", "alice@test.com", "alice123"))
         }.andReturn()
-        aliceId = UUID.fromString(objectMapper.readTree(aliceResult.response.contentAsString)["id"].asText())
+        aliceId = UUID.fromString(objectMapper.readTree(aliceResult.response.contentAsString)["id"].asString())
         aliceToken = loginAndGetToken("alice@test.com", "alice123")
 
         val bobResult = mockMvc.post("/api/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Bob", "bob@test.com", "bob123"))
         }.andReturn()
-        bobId = UUID.fromString(objectMapper.readTree(bobResult.response.contentAsString)["id"].asText())
+        bobId = UUID.fromString(objectMapper.readTree(bobResult.response.contentAsString)["id"].asString())
         bobToken = loginAndGetToken("bob@test.com", "bob123")
     }
 
@@ -86,7 +88,7 @@ class BookingControllerIntegrationTest
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(LoginRequest(email, password))
         }.andReturn()
-        return objectMapper.readTree(result.response.contentAsString)["token"].asText()
+        return objectMapper.readTree(result.response.contentAsString)["token"].asString()
     }
 
     private fun createRoom(name: String = "Conference Room", capacity: Int = 10): UUID
@@ -96,7 +98,7 @@ class BookingControllerIntegrationTest
             content = objectMapper.writeValueAsString(CreateRoomRequest(name, capacity))
             header("Authorization", "Bearer $adminToken")
         }.andReturn()
-        return UUID.fromString(objectMapper.readTree(result.response.contentAsString)["id"].asText())
+        return UUID.fromString(objectMapper.readTree(result.response.contentAsString)["id"].asString())
     }
 
     @Test
@@ -123,7 +125,7 @@ class BookingControllerIntegrationTest
             jsonPath("$.specialRequests") { value("Projector needed") }
         }.andReturn()
 
-        val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asText()
+        val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
         mockMvc.get("/api/bookings/$createdId") {
             header("Authorization", "Bearer $aliceToken")
@@ -207,7 +209,7 @@ class BookingControllerIntegrationTest
             content = objectMapper.writeValueAsString(request)
             header("Authorization", "Bearer $aliceToken")
         }.andReturn()
-        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asText()
+        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
         mockMvc.post("/api/bookings/$bookingId/cancel") {
             contentType = MediaType.APPLICATION_JSON
@@ -241,7 +243,7 @@ class BookingControllerIntegrationTest
             )
             header("Authorization", "Bearer $aliceToken")
         }.andReturn()
-        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asText()
+        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
         mockMvc.post("/api/bookings/$bookingId/cancel") {
             contentType = MediaType.APPLICATION_JSON
@@ -263,7 +265,7 @@ class BookingControllerIntegrationTest
             )
             header("Authorization", "Bearer $aliceToken")
         }.andReturn()
-        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asText()
+        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
         mockMvc.get("/api/bookings/$bookingId") {
             header("Authorization", "Bearer $bobToken")

@@ -4,20 +4,25 @@ import com.kyovo.adapter.persistence.entity.UserEntity
 import com.kyovo.adapter.persistence.repository.UserJpaRepository
 import com.kyovo.adapter.web.dto.LoginRequest
 import com.kyovo.adapter.web.dto.RegisterRequest
+import com.kyovo.config.TestTimeProviderConfig
+import com.kyovo.provider.MutableTimeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
+import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
+import java.time.LocalDateTime
 import java.util.*
 
 @SpringBootTest
+@Import(TestTimeProviderConfig::class)
 @AutoConfigureMockMvc
 class AuthControllerIntegrationTest
 {
@@ -33,15 +38,21 @@ class AuthControllerIntegrationTest
     @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
 
+    @Autowired
+    lateinit var timeProvider: MutableTimeProvider
+
     @BeforeEach
     fun setUp()
     {
+        timeProvider.setNow(LocalDateTime.of(2026, 1, 1, 0, 0))
         userJpaRepository.deleteAll()
     }
 
     @Test
     fun `POST api-auth-register creates a user and returns 201`()
     {
+        timeProvider.setNow(LocalDateTime.of(2026, 1, 2, 11, 30, 45))
+
         mockMvc.post("/api/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Alice", "alice@example.com", "password"))
@@ -50,7 +61,7 @@ class AuthControllerIntegrationTest
             jsonPath("$.id") { isNotEmpty() }
             jsonPath("$.name") { value("Alice") }
             jsonPath("$.email") { value("alice@example.com") }
-            jsonPath("$.role") { value("USER") }
+            jsonPath("$.registered_at") { value("2026-01-02T11:30:45") }
         }
 
         assertThat(userJpaRepository.count()).isEqualTo(1)
@@ -76,7 +87,10 @@ class AuthControllerIntegrationTest
     fun `POST api-auth-login returns 200 with a valid token`()
     {
         userJpaRepository.save(
-            UserEntity(UUID.randomUUID(), "Alice", "alice@example.com", passwordEncoder.encode("password")!!, "USER")
+            UserEntity(
+                UUID.randomUUID(), "Alice", "alice@example.com", passwordEncoder.encode("password")!!, "USER",
+                LocalDateTime.now()
+            )
         )
 
         val result = mockMvc.post("/api/auth/login") {
@@ -87,7 +101,7 @@ class AuthControllerIntegrationTest
             jsonPath("$.token") { isNotEmpty() }
         }.andReturn()
 
-        val token = objectMapper.readTree(result.response.contentAsString)["token"].asText()
+        val token = objectMapper.readTree(result.response.contentAsString)["token"].asString()
         assertThat(token).isNotBlank()
     }
 
@@ -95,7 +109,10 @@ class AuthControllerIntegrationTest
     fun `POST api-auth-login returns 401 when password is wrong`()
     {
         userJpaRepository.save(
-            UserEntity(UUID.randomUUID(), "Alice", "alice@example.com", passwordEncoder.encode("password")!!, "USER")
+            UserEntity(
+                UUID.randomUUID(), "Alice", "alice@example.com", passwordEncoder.encode("password")!!, "USER",
+                LocalDateTime.now()
+            )
         )
 
         mockMvc.post("/api/auth/login") {

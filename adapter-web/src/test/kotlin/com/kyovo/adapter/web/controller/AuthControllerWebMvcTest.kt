@@ -22,6 +22,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.*
 
 @WebMvcTest(AuthController::class)
@@ -43,9 +47,14 @@ class AuthControllerWebMvcTest
     @MockitoBean
     private lateinit var tokenBlacklistService: TokenBlacklistService
 
+    private val fixedClock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC)
+
     private val userId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
     private val savedUser =
-        User(UserId(userId), UserName("Alice"), UserEmail("alice@example.com"), UserPassword("hashed"), UserRole.USER)
+        User(
+            UserId(userId), UserName("Alice"), UserEmail("alice@example.com"), UserPassword("hashed"), UserRole.USER,
+            UserRegistrationDate(LocalDateTime.now(fixedClock))
+        )
 
     @Test
     fun `POST api-auth-register returns 201 with user info`()

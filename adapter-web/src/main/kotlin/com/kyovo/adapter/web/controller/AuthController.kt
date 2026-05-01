@@ -3,7 +3,7 @@ package com.kyovo.adapter.web.controller
 import com.kyovo.adapter.web.dto.LoginRequest
 import com.kyovo.adapter.web.dto.LoginResponse
 import com.kyovo.adapter.web.dto.RegisterRequest
-import com.kyovo.adapter.web.dto.UserResponse
+import com.kyovo.adapter.web.dto.RegisterResponse
 import com.kyovo.adapter.web.security.AuthToken
 import com.kyovo.adapter.web.security.JwtService
 import com.kyovo.adapter.web.security.TokenBlacklistService
@@ -37,10 +37,10 @@ class AuthController(
         ApiResponse(responseCode = "201", description = "Account created successfully"),
         ApiResponse(responseCode = "409", description = "Email already in use")
     )
-    fun register(@RequestBody request: RegisterRequest): ResponseEntity<UserResponse>
+    fun register(@RequestBody request: RegisterRequest): ResponseEntity<RegisterResponse>
     {
         val user = authUseCase.register(request.toNewUser())
-        return ResponseEntity(UserResponse.fromDomain(user), HttpStatus.CREATED)
+        return ResponseEntity(RegisterResponse.fromDomain(user), HttpStatus.CREATED)
     }
 
     @PostMapping("/login")

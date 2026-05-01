@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
+import java.time.LocalDateTime
 import java.util.*
 
 @SpringBootTest
@@ -52,7 +53,8 @@ class RoomControllerIntegrationTest
                 "Admin",
                 "admin@test.com",
                 passwordEncoder.encode("admin123")!!,
-                "ADMIN"
+                "ADMIN",
+                LocalDateTime.now()
             )
         )
         userJpaRepository.save(
@@ -61,7 +63,8 @@ class RoomControllerIntegrationTest
                 "User",
                 "user@test.com",
                 passwordEncoder.encode("user123")!!,
-                "USER"
+                "USER",
+                LocalDateTime.now()
             )
         )
 
@@ -75,7 +78,7 @@ class RoomControllerIntegrationTest
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(LoginRequest(email, password))
         }.andReturn()
-        return objectMapper.readTree(result.response.contentAsString)["token"].asText()
+        return objectMapper.readTree(result.response.contentAsString)["token"].asString()
     }
 
     @Test
@@ -125,7 +128,7 @@ class RoomControllerIntegrationTest
             header("Authorization", "Bearer $adminToken")
         }.andReturn()
 
-        val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asText()
+        val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
         mockMvc.get("/api/rooms") {
             header("Authorization", "Bearer $userToken")
@@ -147,7 +150,7 @@ class RoomControllerIntegrationTest
             header("Authorization", "Bearer $adminToken")
         }.andReturn()
 
-        val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asText()
+        val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
         mockMvc.get("/api/rooms/$createdId") {
             header("Authorization", "Bearer $userToken")

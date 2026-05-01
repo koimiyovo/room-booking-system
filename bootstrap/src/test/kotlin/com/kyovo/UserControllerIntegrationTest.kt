@@ -15,6 +15,7 @@ import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.*
 import tools.jackson.databind.ObjectMapper
+import java.time.LocalDateTime
 import java.util.*
 
 @SpringBootTest
@@ -47,7 +48,8 @@ class UserControllerIntegrationTest
                 "Admin",
                 "admin@test.com",
                 passwordEncoder.encode("admin123")!!,
-                "ADMIN"
+                "ADMIN",
+                LocalDateTime.now()
             )
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
@@ -56,7 +58,7 @@ class UserControllerIntegrationTest
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Alice", "alice@test.com", "alice123"))
         }.andReturn()
-        aliceId = objectMapper.readTree(registerResult.response.contentAsString)["id"].asText()
+        aliceId = objectMapper.readTree(registerResult.response.contentAsString)["id"].asString()
         aliceToken = loginAndGetToken("alice@test.com", "alice123")
     }
 
@@ -66,7 +68,7 @@ class UserControllerIntegrationTest
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(LoginRequest(email, password))
         }.andReturn()
-        return objectMapper.readTree(result.response.contentAsString)["token"].asText()
+        return objectMapper.readTree(result.response.contentAsString)["token"].asString()
     }
 
     @Test
@@ -135,7 +137,7 @@ class UserControllerIntegrationTest
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Bob", "bob@test.com", "bob123"))
         }.andReturn()
-        val bobId = objectMapper.readTree(otherResult.response.contentAsString)["id"].asText()
+        val bobId = objectMapper.readTree(otherResult.response.contentAsString)["id"].asString()
 
         mockMvc.put("/api/users/$bobId") {
             contentType = MediaType.APPLICATION_JSON
@@ -165,7 +167,7 @@ class UserControllerIntegrationTest
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Bob", "bob@test.com", "bob123"))
         }.andReturn()
-        val bobId = objectMapper.readTree(otherResult.response.contentAsString)["id"].asText()
+        val bobId = objectMapper.readTree(otherResult.response.contentAsString)["id"].asString()
 
         mockMvc.delete("/api/users/$bobId") {
             header("Authorization", "Bearer $aliceToken")

@@ -5,20 +5,36 @@ import com.kyovo.domain.exception.InvalidCredentialsException
 import com.kyovo.domain.model.*
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.UserRepository
+import com.kyovo.domain.provider.TimeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
-import java.util.UUID
+import java.time.LocalDateTime
+import java.util.*
 
 class AuthServiceTest
 {
     private val userRepository: UserRepository = mock()
     private val passwordHashPort: PasswordHashPort = mock()
-    private val authService = AuthService(userRepository, passwordHashPort)
+    private val timeProvider = object : TimeProvider
+    {
+        override fun now(): LocalDateTime
+        {
+            return LocalDateTime.of(2026, 4, 1, 0, 0)
+        }
+    }
+    private val authService = AuthService(userRepository, passwordHashPort, timeProvider)
 
     private val userId = UserId(UUID.randomUUID())
-    private val existingUser = User(userId, UserName("Alice"), UserEmail("alice@example.com"), UserPassword("hashed"), UserRole.USER)
+    private val existingUser = User(
+        userId,
+        UserName("Alice"),
+        UserEmail("alice@example.com"),
+        UserPassword("hashed"),
+        UserRole.USER,
+        UserRegistrationDate(timeProvider.now())
+    )
 
     @Test
     fun `register hashes the password before persisting`()
