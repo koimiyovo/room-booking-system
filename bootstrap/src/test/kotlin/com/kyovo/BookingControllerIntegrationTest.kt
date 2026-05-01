@@ -12,7 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
@@ -39,7 +39,8 @@ class BookingControllerIntegrationTest
     @Autowired
     private lateinit var userJpaRepository: UserJpaRepository
 
-    private val encoder = BCryptPasswordEncoder()
+    @Autowired
+    private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var aliceToken: String
     private lateinit var aliceId: UUID
@@ -58,7 +59,7 @@ class BookingControllerIntegrationTest
                 UUID.randomUUID(),
                 "Admin",
                 "admin@test.com",
-                encoder.encode("admin123")!!,
+                passwordEncoder.encode("admin123")!!,
                 "ADMIN"
             )
         )

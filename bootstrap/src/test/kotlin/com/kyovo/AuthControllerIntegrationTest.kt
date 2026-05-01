@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.MediaType
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
@@ -30,7 +30,8 @@ class AuthControllerIntegrationTest
     @Autowired
     private lateinit var userJpaRepository: UserJpaRepository
 
-    private val encoder = BCryptPasswordEncoder()
+    @Autowired
+    private lateinit var passwordEncoder: PasswordEncoder
 
     @BeforeEach
     fun setUp()
@@ -75,7 +76,7 @@ class AuthControllerIntegrationTest
     fun `POST api-auth-login returns 200 with a valid token`()
     {
         userJpaRepository.save(
-            UserEntity(UUID.randomUUID(), "Alice", "alice@example.com", encoder.encode("password")!!, "USER")
+            UserEntity(UUID.randomUUID(), "Alice", "alice@example.com", passwordEncoder.encode("password")!!, "USER")
         )
 
         val result = mockMvc.post("/api/auth/login") {
@@ -94,7 +95,7 @@ class AuthControllerIntegrationTest
     fun `POST api-auth-login returns 401 when password is wrong`()
     {
         userJpaRepository.save(
-            UserEntity(UUID.randomUUID(), "Alice", "alice@example.com", encoder.encode("password")!!, "USER")
+            UserEntity(UUID.randomUUID(), "Alice", "alice@example.com", passwordEncoder.encode("password")!!, "USER")
         )
 
         mockMvc.post("/api/auth/login") {
