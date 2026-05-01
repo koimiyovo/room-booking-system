@@ -2,7 +2,9 @@
 
 ## Overview
 
-The room booking system uses **JWT (JSON Web Tokens)** with **Spring Security** for stateless authentication and role-based authorization. The implementation follows the hexagonal architecture: security concerns are an adapter-web detail; the domain remains Spring-free.
+The room booking system uses **JWT (JSON Web Tokens)** with **Spring Security** for stateless authentication and
+role-based authorization. The implementation follows the hexagonal architecture: security concerns are an
+infrastructure-web detail; the domain remains Spring-free.
 
 ---
 
@@ -67,7 +69,9 @@ Client                     AuthController           TokenBlacklistService
   │ ◄─────────────────────────  │                          │
 ```
 
-The raw token string is stored in the blacklist (`ConcurrentHashMap<String, Long>`, keyed by token value, valued by expiry epoch ms). A nightly `@Scheduled` task evicts expired entries. Subsequent requests carrying a blacklisted token are rejected by `JwtAuthenticationFilter` before signature validation.
+The raw token string is stored in the blacklist (`ConcurrentHashMap<String, Long>`, keyed by token value, valued by
+expiry epoch ms). A nightly `@Scheduled` task evicts expired entries. Subsequent requests carrying a blacklisted token
+are rejected by `JwtAuthenticationFilter` before signature validation.
 
 ### Authenticated Request
 
@@ -99,25 +103,25 @@ Client              JwtAuthenticationFilter      SecurityConfig         Controll
 
 ## Components
 
-### adapter-web
+### infrastructure-web
 
-| Component | Role |
-|---|---|
-| `AuthToken` | `@JvmInline value class AuthToken(val value: String)` — type-safe wrapper around the raw JWT string. Used throughout the security stack to avoid passing bare strings. |
-| `JwtService` | Generates JWT tokens (`generateToken()` returns `AuthToken`) and validates/parses them. Reads secret and expiry from `application.yml`. |
-| `TokenBlacklistService` | In-memory revocation list (`ConcurrentHashMap<String, Long>`). `revoke(AuthToken)` stores the token until its expiry; a nightly `@Scheduled` cleanup evicts expired entries. Public API uses `AuthToken`. |
-| `JwtAuthenticationFilter` | `OncePerRequestFilter` — extracts the `Bearer` token, wraps it in `AuthToken`, checks the blacklist, validates the signature, then sets the `SecurityContext` with `userId` as principal and `ROLE_XXX` as authority. |
-| `SecurityConfig` | Defines the `SecurityFilterChain`: disables CSRF, stateless sessions, registers rules per endpoint and role, adds `JwtAuthenticationFilter` before `UsernamePasswordAuthenticationFilter`. Declares `@Bean fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()`. |
-| `BCryptPasswordHashAdapter` | Implements `PasswordHashPort` (domain port). Receives `PasswordEncoder` via constructor injection — the BCrypt algorithm is a `SecurityConfig` detail, not hardcoded in the adapter. |
-| `AuthController` | `POST /api/auth/register` and `POST /api/auth/login` (public). `POST /api/auth/logout` (authenticated) — delegates token revocation to `TokenBlacklistService`. |
+| Component                   | Role                                                                                                                                                                                                                                                                          |
+|-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `AuthToken`                 | `@JvmInline value class AuthToken(val value: String)` — type-safe wrapper around the raw JWT string. Used throughout the security stack to avoid passing bare strings.                                                                                                        |
+| `JwtService`                | Generates JWT tokens (`generateToken()` returns `AuthToken`) and validates/parses them. Reads secret and expiry from `application.yml`.                                                                                                                                       |
+| `TokenBlacklistService`     | In-memory revocation list (`ConcurrentHashMap<String, Long>`). `revoke(AuthToken)` stores the token until its expiry; a nightly `@Scheduled` cleanup evicts expired entries. Public API uses `AuthToken`.                                                                     |
+| `JwtAuthenticationFilter`   | `OncePerRequestFilter` — extracts the `Bearer` token, wraps it in `AuthToken`, checks the blacklist, validates the signature, then sets the `SecurityContext` with `userId` as principal and `ROLE_XXX` as authority.                                                         |
+| `SecurityConfig`            | Defines the `SecurityFilterChain`: disables CSRF, stateless sessions, registers rules per endpoint and role, adds `JwtAuthenticationFilter` before `UsernamePasswordAuthenticationFilter`. Declares `@Bean fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()`. |
+| `BCryptPasswordHashAdapter` | Implements `PasswordHashPort` (domain port). Receives `PasswordEncoder` via constructor injection — the BCrypt algorithm is a `SecurityConfig` detail, not hardcoded in the adapter.                                                                                          |
+| `AuthController`            | `POST /api/auth/register` and `POST /api/auth/login` (public). `POST /api/auth/logout` (authenticated) — delegates token revocation to `TokenBlacklistService`.                                                                                                               |
 
 ### domain
 
-| Component | Role |
-|---|---|
+| Component          | Role                                                                                     |
+|--------------------|------------------------------------------------------------------------------------------|
 | `PasswordHashPort` | Secondary port — abstracts password hashing. Implemented by `BCryptPasswordHashAdapter`. |
-| `UserRole` | Enum `USER` / `ADMIN` stored on the `User` aggregate and embedded in the JWT. |
-| `UserPassword` | Value object wrapping the BCrypt hash. Never returned to clients. |
+| `UserRole`         | Enum `USER` / `ADMIN` stored on the `User` aggregate and embedded in the JWT.            |
+| `UserPassword`     | Value object wrapping the BCrypt hash. Never returned to clients.                        |
 
 ---
 
@@ -137,6 +141,7 @@ Signature: HMAC-SHA256(base64(header) + "." + base64(payload), secret)
 The `userId` is stored in `sub`. The `SecurityContext` principal name is set to this UUID string.
 
 **Configuration** (`application.yml`):
+
 ```yaml
 app:
   jwt:
@@ -148,24 +153,25 @@ app:
 
 ## Authorization Matrix
 
-| Endpoint | PUBLIC | USER | ADMIN |
-|---|:---:|:---:|:---:|
-| `POST /api/auth/register` | ✓ | ✓ | ✓ |
-| `POST /api/auth/login` | ✓ | ✓ | ✓ |
-| `GET /api/users` | | | ✓ |
-| `GET /api/users/{id}` | | | ✓ |
-| `PUT /api/users/{id}` | | own account | ✓ |
-| `DELETE /api/users/{id}` | | own account | ✓ |
-| `GET /api/rooms` | | ✓ | ✓ |
-| `GET /api/rooms/{id}` | | ✓ | ✓ |
-| `POST /api/rooms` | | | ✓ |
-| `GET /api/bookings` | | | ✓ |
-| `GET /api/bookings/my` | | ✓ | ✓ |
-| `GET /api/bookings/{id}` | | own booking | ✓ |
-| `POST /api/bookings` | | ✓ | ✓ |
-| `POST /api/bookings/{id}/cancel` | | own booking | ✓ (any) |
+| Endpoint                         | PUBLIC |    USER     |  ADMIN  |
+|----------------------------------|:------:|:-----------:|:-------:|
+| `POST /api/auth/register`        |   ✓    |      ✓      |    ✓    |
+| `POST /api/auth/login`           |   ✓    |      ✓      |    ✓    |
+| `GET /api/users`                 |        |             |    ✓    |
+| `GET /api/users/{id}`            |        |             |    ✓    |
+| `PUT /api/users/{id}`            |        | own account |    ✓    |
+| `DELETE /api/users/{id}`         |        | own account |    ✓    |
+| `GET /api/rooms`                 |        |      ✓      |    ✓    |
+| `GET /api/rooms/{id}`            |        |      ✓      |    ✓    |
+| `POST /api/rooms`                |        |             |    ✓    |
+| `GET /api/bookings`              |        |             |    ✓    |
+| `GET /api/bookings/my`           |        |      ✓      |    ✓    |
+| `GET /api/bookings/{id}`         |        | own booking |    ✓    |
+| `POST /api/bookings`             |        |      ✓      |    ✓    |
+| `POST /api/bookings/{id}/cancel` |        | own booking | ✓ (any) |
 
-**Ownership checks** are enforced at the controller level (reading `authentication.name` which contains the userId). For `cancel`, passing `null` as `requestingUserId` in `BookingService` bypasses the ownership check (admin path).
+**Ownership checks** are enforced at the controller level (reading `authentication.name` which contains the userId). For
+`cancel`, passing `null` as `requestingUserId` in `BookingService` bypasses the ownership check (admin path).
 
 ---
 
@@ -173,7 +179,7 @@ app:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                          adapter-web                            │
+│                          infrastructure-web                            │
 │                                                                 │
 │  JwtAuthenticationFilter ──► JwtService    TokenBlacklistService│
 │         │                        │                ▲            │
@@ -198,4 +204,5 @@ app:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-The domain (`UserService`, `BookingService`) knows only the `PasswordHashPort` interface. Spring Security, BCrypt, and JWT are invisible to the domain.
+The domain (`UserService`, `BookingService`) knows only the `PasswordHashPort` interface. Spring Security, BCrypt, and
+JWT are invisible to the domain.

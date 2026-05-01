@@ -1,7 +1,12 @@
 package com.kyovo.domain.service
 
 import com.kyovo.domain.exception.*
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.booking.*
+import com.kyovo.domain.model.room.Room
+import com.kyovo.domain.model.room.RoomCapacity
+import com.kyovo.domain.model.room.RoomId
+import com.kyovo.domain.model.room.RoomName
+import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.port.secondary.BookingRepository
 import com.kyovo.domain.port.secondary.RoomRepository
 import com.kyovo.domain.port.secondary.TransactionPort
@@ -135,7 +140,16 @@ class BookingServiceTest
     fun `cancel throws BookingAlreadyCancelledException when booking is already cancelled`()
     {
         val bookingId = BookingId(UUID.randomUUID())
-        val cancelled = Booking(bookingId, roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null, Cancellation(userId, null))
+        val cancelled = Booking(
+            bookingId,
+            roomId,
+            userId,
+            startDate,
+            endDate,
+            BookingNumberOfPeople(5),
+            null,
+            Cancellation(userId, null)
+        )
         whenever(bookingRepository.findById(bookingId)).thenReturn(cancelled)
 
         assertThatThrownBy { bookingService.cancel(bookingId, userId, false, null) }

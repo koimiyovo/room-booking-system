@@ -1,6 +1,8 @@
 package com.kyovo.domain.port.primary
 
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.user.UpdateUser
+import com.kyovo.domain.model.user.User
+import com.kyovo.domain.model.user.UserId
 
 interface UserUseCase
 {

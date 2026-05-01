@@ -1,6 +1,8 @@
 package com.kyovo.domain.port.secondary
 
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.user.User
+import com.kyovo.domain.model.user.UserEmail
+import com.kyovo.domain.model.user.UserId
 
 interface UserRepository
 {

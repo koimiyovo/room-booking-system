@@ -5,7 +5,7 @@ import com.kyovo.domain.service.AuthService
 import com.kyovo.domain.service.BookingService
 import com.kyovo.domain.service.RoomService
 import com.kyovo.domain.service.UserService
-import com.kyovo.provider.SystemTimeProvider
+import com.kyovo.infrastructure.provider.SystemTimeProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 

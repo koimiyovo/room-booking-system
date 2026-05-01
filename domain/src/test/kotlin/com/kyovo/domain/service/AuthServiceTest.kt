@@ -2,7 +2,7 @@ package com.kyovo.domain.service
 
 import com.kyovo.domain.exception.EmailAlreadyUsedException
 import com.kyovo.domain.exception.InvalidCredentialsException
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.secondary.ClockPort
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.UserRepository

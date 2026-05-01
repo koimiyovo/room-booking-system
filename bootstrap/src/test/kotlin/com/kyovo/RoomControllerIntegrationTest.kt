@@ -1,11 +1,11 @@
 package com.kyovo
 
-import com.kyovo.adapter.persistence.entity.UserEntity
-import com.kyovo.adapter.persistence.repository.RoomJpaRepository
-import com.kyovo.adapter.persistence.repository.UserJpaRepository
-import com.kyovo.adapter.web.dto.CreateRoomRequest
-import com.kyovo.adapter.web.dto.LoginRequest
 import com.kyovo.config.TestTimeProviderConfig
+import com.kyovo.infrastructure.api.dto.CreateRoomRequest
+import com.kyovo.infrastructure.api.dto.LoginRequest
+import com.kyovo.infrastructure.persistence.entity.UserEntity
+import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
+import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

@@ -1,6 +1,8 @@
 package com.kyovo.domain.port.primary
 
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.room.NewRoom
+import com.kyovo.domain.model.room.Room
+import com.kyovo.domain.model.room.RoomId
 
 interface RoomUseCase
 {

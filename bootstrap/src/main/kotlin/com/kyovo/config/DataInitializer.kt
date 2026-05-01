@@ -1,6 +1,10 @@
 package com.kyovo.config
 
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.booking.*
+import com.kyovo.domain.model.room.NewRoom
+import com.kyovo.domain.model.room.RoomCapacity
+import com.kyovo.domain.model.room.RoomName
+import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.primary.AuthUseCase
 import com.kyovo.domain.port.primary.BookingUseCase
 import com.kyovo.domain.port.primary.RoomUseCase
@@ -37,7 +41,13 @@ class DataInitializer(
                 UserPassword("alice123")
             )
         )
-        val bob = authUseCase.register(NewUser(UserName("Bob Smith"), UserEmail("bob@example.com"), UserPassword("bob123")))
+        val bob = authUseCase.register(
+            NewUser(
+                UserName("Bob Smith"),
+                UserEmail("bob@example.com"),
+                UserPassword("bob123")
+            )
+        )
 
         bookingUseCase.create(
             NewBooking(

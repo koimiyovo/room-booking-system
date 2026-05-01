@@ -1,8 +1,8 @@
 package com.kyovo.domain.exception
 
-import com.kyovo.domain.model.BookingEndDate
-import com.kyovo.domain.model.BookingStartDate
-import com.kyovo.domain.model.RoomId
+import com.kyovo.domain.model.booking.BookingEndDate
+import com.kyovo.domain.model.booking.BookingStartDate
+import com.kyovo.domain.model.room.RoomId
 
 class BookingConflictException(
     val roomId: RoomId,

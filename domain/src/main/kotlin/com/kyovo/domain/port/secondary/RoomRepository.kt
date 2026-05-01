@@ -1,7 +1,7 @@
 package com.kyovo.domain.port.secondary
 
-import com.kyovo.domain.model.Room
-import com.kyovo.domain.model.RoomId
+import com.kyovo.domain.model.room.Room
+import com.kyovo.domain.model.room.RoomId
 
 interface RoomRepository
 {

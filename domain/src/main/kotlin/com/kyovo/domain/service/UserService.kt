@@ -2,7 +2,9 @@ package com.kyovo.domain.service
 
 import com.kyovo.domain.exception.EmailAlreadyUsedException
 import com.kyovo.domain.exception.UserNotFoundException
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.user.UpdateUser
+import com.kyovo.domain.model.user.User
+import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.port.primary.UserUseCase
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.UserRepository
@@ -25,7 +27,8 @@ class UserService(
     override fun update(id: UserId, data: UpdateUser): User
     {
         val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
-        if (data.email != null && data.email != user.email) {
+        if (data.email != null && data.email != user.email)
+        {
             if (userRepository.findByEmail(data.email) != null) throw EmailAlreadyUsedException(data.email)
         }
         val updated = user.copy(

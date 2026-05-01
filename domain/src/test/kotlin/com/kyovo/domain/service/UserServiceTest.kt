@@ -2,7 +2,7 @@ package com.kyovo.domain.service
 
 import com.kyovo.domain.exception.EmailAlreadyUsedException
 import com.kyovo.domain.exception.UserNotFoundException
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.UserRepository
 import org.assertj.core.api.Assertions.assertThat

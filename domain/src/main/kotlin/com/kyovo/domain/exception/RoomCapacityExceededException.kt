@@ -1,7 +1,7 @@
 package com.kyovo.domain.exception
 
-import com.kyovo.domain.model.BookingNumberOfPeople
-import com.kyovo.domain.model.RoomCapacity
+import com.kyovo.domain.model.booking.BookingNumberOfPeople
+import com.kyovo.domain.model.room.RoomCapacity
 
 class RoomCapacityExceededException(
     requested: BookingNumberOfPeople,
