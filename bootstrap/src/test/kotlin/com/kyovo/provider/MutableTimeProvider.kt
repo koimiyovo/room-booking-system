@@ -1,16 +1,16 @@
 package com.kyovo.provider
 
 import com.kyovo.domain.provider.TimeProvider
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 
-class MutableTimeProvider(private var current: LocalDateTime) : TimeProvider
+class MutableTimeProvider(private var current: OffsetDateTime) : TimeProvider
 {
-    override fun now(): LocalDateTime
+    override fun now(): OffsetDateTime
     {
         return current
     }
 
-    fun setNow(newNow: LocalDateTime)
+    fun setNow(newNow: OffsetDateTime)
     {
         this.current = newNow
     }

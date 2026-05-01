@@ -19,6 +19,8 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.*
 
 @SpringBootTest
@@ -44,14 +46,14 @@ class AuthControllerIntegrationTest
     @BeforeEach
     fun setUp()
     {
-        timeProvider.setNow(LocalDateTime.of(2026, 1, 1, 0, 0))
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 1, 1, 0, 0), ZoneOffset.UTC))
         userJpaRepository.deleteAll()
     }
 
     @Test
     fun `POST api-auth-register creates a user and returns 201`()
     {
-        timeProvider.setNow(LocalDateTime.of(2026, 1, 2, 11, 30, 45))
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 1, 2, 11, 30, 45), ZoneOffset.UTC))
 
         mockMvc.post("/api/auth/register") {
             contentType = MediaType.APPLICATION_JSON
@@ -61,7 +63,7 @@ class AuthControllerIntegrationTest
             jsonPath("$.id") { isNotEmpty() }
             jsonPath("$.name") { value("Alice") }
             jsonPath("$.email") { value("alice@example.com") }
-            jsonPath("$.registered_at") { value("2026-01-02T11:30:45") }
+            jsonPath("$.registered_at") { value("2026-01-02T11:30:45Z") }
         }
 
         assertThat(userJpaRepository.count()).isEqualTo(1)
@@ -89,7 +91,7 @@ class AuthControllerIntegrationTest
         userJpaRepository.save(
             UserEntity(
                 UUID.randomUUID(), "Alice", "alice@example.com", passwordEncoder.encode("password")!!, "USER",
-                LocalDateTime.now()
+                OffsetDateTime.now()
             )
         )
 
@@ -111,7 +113,7 @@ class AuthControllerIntegrationTest
         userJpaRepository.save(
             UserEntity(
                 UUID.randomUUID(), "Alice", "alice@example.com", passwordEncoder.encode("password")!!, "USER",
-                LocalDateTime.now()
+                OffsetDateTime.now()
             )
         )
 

@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.*
 
 @SpringBootTest
@@ -62,7 +62,7 @@ class BookingControllerIntegrationTest
                 "admin@test.com",
                 passwordEncoder.encode("admin123")!!,
                 "ADMIN",
-                LocalDateTime.now()
+                OffsetDateTime.now()
             )
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")

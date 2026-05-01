@@ -17,7 +17,7 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.*
 
 @SpringBootTest
@@ -54,7 +54,7 @@ class RoomControllerIntegrationTest
                 "admin@test.com",
                 passwordEncoder.encode("admin123")!!,
                 "ADMIN",
-                LocalDateTime.now()
+                OffsetDateTime.now()
             )
         )
         userJpaRepository.save(
@@ -64,7 +64,7 @@ class RoomControllerIntegrationTest
                 "user@test.com",
                 passwordEncoder.encode("user123")!!,
                 "USER",
-                LocalDateTime.now()
+                OffsetDateTime.now()
             )
         )
 

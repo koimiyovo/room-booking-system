@@ -2,12 +2,12 @@ package com.kyovo.provider
 
 import com.kyovo.domain.provider.TimeProvider
 import java.time.Clock
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 
 class SystemTimeProvider(private val clock: Clock) : TimeProvider
 {
-    override fun now(): LocalDateTime
+    override fun now(): OffsetDateTime
     {
-        return LocalDateTime.now(clock)
+        return OffsetDateTime.now(clock)
     }
 }

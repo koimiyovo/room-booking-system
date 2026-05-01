@@ -24,7 +24,7 @@ import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
 import java.time.Clock
 import java.time.Instant
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.*
 
@@ -52,8 +52,12 @@ class AuthControllerWebMvcTest
     private val userId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
     private val savedUser =
         User(
-            UserId(userId), UserName("Alice"), UserEmail("alice@example.com"), UserPassword("hashed"), UserRole.USER,
-            UserRegistrationDate(LocalDateTime.now(fixedClock))
+            UserId(userId),
+            UserName("Alice"),
+            UserEmail("alice@example.com"),
+            UserPassword("hashed"),
+            UserRole.USER,
+            UserRegistrationDate(OffsetDateTime.now(fixedClock))
         )
 
     @Test

@@ -1,14 +1,14 @@
 package com.kyovo.adapter.web.dto
 
 import com.kyovo.domain.model.User
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.*
 
 data class RegisterResponse(
     val id: UUID,
     val name: String,
     val email: String,
-    val registered_at: LocalDateTime,
+    val registered_at: OffsetDateTime,
 )
 {
     companion object

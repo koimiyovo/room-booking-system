@@ -15,7 +15,7 @@ import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.*
 import tools.jackson.databind.ObjectMapper
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.util.*
 
 @SpringBootTest
@@ -49,7 +49,7 @@ class UserControllerIntegrationTest
                 "admin@test.com",
                 passwordEncoder.encode("admin123")!!,
                 "ADMIN",
-                LocalDateTime.now()
+                OffsetDateTime.now()
             )
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")

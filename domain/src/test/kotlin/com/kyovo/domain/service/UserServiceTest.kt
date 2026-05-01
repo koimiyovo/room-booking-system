@@ -14,7 +14,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Clock
 import java.time.Instant
-import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.*
 
@@ -32,7 +32,7 @@ class UserServiceTest
         UserEmail("alice@example.com"),
         UserPassword("hashed"),
         UserRole.USER,
-        UserRegistrationDate(LocalDateTime.now(fixedClock))
+        UserRegistrationDate(OffsetDateTime.now(fixedClock))
     )
 
     @Test

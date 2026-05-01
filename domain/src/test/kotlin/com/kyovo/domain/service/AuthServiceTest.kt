@@ -11,6 +11,8 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.*
 
 class AuthServiceTest
@@ -19,9 +21,9 @@ class AuthServiceTest
     private val passwordHashPort: PasswordHashPort = mock()
     private val timeProvider = object : TimeProvider
     {
-        override fun now(): LocalDateTime
+        override fun now(): OffsetDateTime
         {
-            return LocalDateTime.of(2026, 4, 1, 0, 0)
+            return OffsetDateTime.of(LocalDateTime.of(2026, 4, 1, 0, 0), ZoneOffset.UTC)
         }
     }
     private val authService = AuthService(userRepository, passwordHashPort, timeProvider)
