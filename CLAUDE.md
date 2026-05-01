@@ -99,3 +99,12 @@ Four test layers, each in its own module:
 - `ArchitectureTest` uses `ClassFileImporter().importPackages("com.kyovo")` (not `@AnalyzeClasses`) so that Maven Surefire counts and reports the tests correctly. It enforces: domain free of Spring/JPA, no cross-adapter dependencies, persistence adapter naming convention, no cyclic dependencies within the domain.
 - Test names (backtick strings in Kotlin) must be written in English.
 - OpenAPI documentation (Swagger annotations: `@Tag`, `@Operation`, `@ApiResponse`, `@Parameter`, and `OpenApiConfig` descriptions) must be written in English.
+
+### Spring Boot 4 test specifics
+
+- **`@MockBean` / `@SpyBean` are removed** — use `@MockitoBean` / `@MockitoSpyBean` exclusively.
+- **`@WebMvcTest` and `@AutoConfigureMockMvc` moved** to a new package: `org.springframework.boot.webmvc.test.autoconfigure` (was `org.springframework.boot.test.autoconfigure.web.servlet`). Always import from this package.
+- **Web slice test dependencies** in `adapter-web/pom.xml`:
+  - `spring-boot-starter-webmvc-test` — provides `@WebMvcTest`, `@AutoConfigureMockMvc`, and MockMvc autoconfiguration.
+  - `spring-boot-starter-security-test` — provides `@WithMockUser`, `csrf()`, and Spring Security test support (brings `spring-security-test` transitively).
+- `spring-boot-starter-test` is no longer declared explicitly in `adapter-web` — it is brought transitively by the two starters above.

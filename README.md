@@ -14,8 +14,8 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 ## Tech stack
 
 - **Kotlin** 2.3 / **Java** 19
-- **Spring Boot** 3.5
-- **Spring Security** — stateless JWT
+- **Spring Boot** 4.0
+- **Spring Security** 7 — stateless JWT
 - **Spring Data JPA** / **H2** (in-memory)
 - **jjwt** 0.13 — JWT generation and validation
 - **ArchUnit** 1.4 — architecture rules enforced as tests
@@ -115,7 +115,7 @@ mvn clean test -pl bootstrap
 mvn clean test -Dtest=RoomServiceTest
 ```
 
-The test suite includes domain unit tests, web slice tests (`@WebMvcTest`), integration tests (`@SpringBootTest`), and architecture rules enforced via ArchUnit.
+The test suite includes domain unit tests, web slice tests (`@WebMvcTest`), integration tests (`@SpringBootTest` + `@AutoConfigureMockMvc`), and architecture rules enforced via ArchUnit.
 
 ## License
 

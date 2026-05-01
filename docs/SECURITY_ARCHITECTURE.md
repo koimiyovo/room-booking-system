@@ -52,6 +52,23 @@ Client                     AuthController           UserService      BCryptPassw
   │ ◄─────────────────────────  │                       │                    │                      │
 ```
 
+### Logout
+
+```
+Client                     AuthController           TokenBlacklistService
+  │                              │                          │
+  │  POST /api/auth/logout        │                          │
+  │  Authorization: Bearer <tok>  │                          │
+  │ ─────────────────────────►  │                          │
+  │                              │  revoke(AuthToken)        │
+  │                              │ ──────────────────────► │
+  │                              │                          │  store token in blacklist
+  │  200 OK                       │                          │
+  │ ◄─────────────────────────  │                          │
+```
+
+The raw token string is stored in the blacklist (`ConcurrentHashMap<String, Long>`, keyed by token value, valued by expiry epoch ms). A nightly `@Scheduled` task evicts expired entries. Subsequent requests carrying a blacklisted token are rejected by `JwtAuthenticationFilter` before signature validation.
+
 ### Authenticated Request
 
 ```
@@ -86,11 +103,13 @@ Client              JwtAuthenticationFilter      SecurityConfig         Controll
 
 | Component | Role |
 |---|---|
-| `JwtService` | Generates JWT tokens (sign) and validates/parses them. Reads secret and expiry from `application.yml`. |
-| `JwtAuthenticationFilter` | `OncePerRequestFilter` — extracts the `Bearer` token from the `Authorization` header, validates it, sets the `SecurityContext` with `userId` as principal and `ROLE_XXX` as authority. |
-| `SecurityConfig` | Defines the `SecurityFilterChain`: disables CSRF, stateless sessions, registers rules per endpoint and role, adds `JwtAuthenticationFilter` before `UsernamePasswordAuthenticationFilter`. |
-| `BCryptPasswordHashAdapter` | Implements `PasswordHashPort` (domain port) using `BCryptPasswordEncoder`. The domain knows only the port; BCrypt is an adapter-web detail. |
-| `AuthController` | `POST /api/auth/register` and `POST /api/auth/login` — public endpoints, no token required. |
+| `AuthToken` | `@JvmInline value class AuthToken(val value: String)` — type-safe wrapper around the raw JWT string. Used throughout the security stack to avoid passing bare strings. |
+| `JwtService` | Generates JWT tokens (`generateToken()` returns `AuthToken`) and validates/parses them. Reads secret and expiry from `application.yml`. |
+| `TokenBlacklistService` | In-memory revocation list (`ConcurrentHashMap<String, Long>`). `revoke(AuthToken)` stores the token until its expiry; a nightly `@Scheduled` cleanup evicts expired entries. Public API uses `AuthToken`. |
+| `JwtAuthenticationFilter` | `OncePerRequestFilter` — extracts the `Bearer` token, wraps it in `AuthToken`, checks the blacklist, validates the signature, then sets the `SecurityContext` with `userId` as principal and `ROLE_XXX` as authority. |
+| `SecurityConfig` | Defines the `SecurityFilterChain`: disables CSRF, stateless sessions, registers rules per endpoint and role, adds `JwtAuthenticationFilter` before `UsernamePasswordAuthenticationFilter`. Declares `@Bean fun passwordEncoder(): PasswordEncoder = BCryptPasswordEncoder()`. |
+| `BCryptPasswordHashAdapter` | Implements `PasswordHashPort` (domain port). Receives `PasswordEncoder` via constructor injection — the BCrypt algorithm is a `SecurityConfig` detail, not hardcoded in the adapter. |
+| `AuthController` | `POST /api/auth/register` and `POST /api/auth/login` (public). `POST /api/auth/logout` (authenticated) — delegates token revocation to `TokenBlacklistService`. |
 
 ### domain
 
@@ -153,29 +172,30 @@ app:
 ## Hexagonal Architecture of Security Components
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        adapter-web                          │
-│                                                             │
-│  JwtAuthenticationFilter ──► JwtService                    │
-│         │                                                   │
-│         ▼                                                   │
-│  SecurityConfig (SecurityFilterChain)                       │
-│         │                                                   │
-│         ▼                                                   │
-│  Controller  ──────────────────────────────────────────┐   │
-│                                                         │   │
-│  BCryptPasswordHashAdapter ◄── PasswordHashPort (port)  │   │
-│                                     (domain)            │   │
-└─────────────────────────────────────────────────────────┼───┘
-                                                          │
-┌─────────────────────────────────────────────────────────┼───┐
-│                         domain                          │   │
-│                                                         │   │
-│  UserService ◄── PasswordHashPort                       │   │
-│       │                                                 ▼   │
-│       └──► UserRepository           BookingService ◄───┘   │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                          adapter-web                            │
+│                                                                 │
+│  JwtAuthenticationFilter ──► JwtService    TokenBlacklistService│
+│         │                        │                ▲            │
+│         │                        └── AuthToken ───┘            │
+│         ▼                                                       │
+│  SecurityConfig (SecurityFilterChain)                           │
+│         │                                                       │
+│         ▼                                                       │
+│  Controller  ────────────────────────────────────────────┐     │
+│                                                           │     │
+│  BCryptPasswordHashAdapter ◄── PasswordHashPort (port)    │     │
+│                                     (domain)              │     │
+└───────────────────────────────────────────────────────────┼─────┘
+                                                            │
+┌───────────────────────────────────────────────────────────┼─────┐
+│                           domain                          │     │
+│                                                           │     │
+│  UserService ◄── PasswordHashPort                         │     │
+│       │                                                   ▼     │
+│       └──► UserRepository             BookingService ◄───┘     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 The domain (`UserService`, `BookingService`) knows only the `PasswordHashPort` interface. Spring Security, BCrypt, and JWT are invisible to the domain.
