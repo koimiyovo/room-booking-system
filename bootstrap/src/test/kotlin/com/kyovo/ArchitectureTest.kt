@@ -31,32 +31,32 @@ class ArchitectureTest
     }
 
     @Test
-    fun `domain does not depend on adapters`()
+    fun `domain does not depend on infrastructure`()
     {
         noClasses()
             .that().resideInAPackage("com.kyovo.domain..")
             .should().dependOnClassesThat()
-            .resideInAPackage("com.kyovo.adapter..")
+            .resideInAPackage("com.kyovo.infrastructure..")
             .check(importedClasses)
     }
 
     @Test
-    fun `adapter-web does not depend on adapter-persistence`()
+    fun `infrastructure-api does not depend on infrastructure-persistence`()
     {
         noClasses()
-            .that().resideInAPackage("com.kyovo.adapter.web..")
+            .that().resideInAPackage("com.kyovo.infrastructure.api..")
             .should().dependOnClassesThat()
-            .resideInAPackage("com.kyovo.adapter.persistence..")
+            .resideInAPackage("com.kyovo.infrastructure.persistence..")
             .check(importedClasses)
     }
 
     @Test
-    fun `adapter-persistence does not depend on adapter-web`()
+    fun `infrastructure-persistence does not depend on infrastructure-api`()
     {
         noClasses()
-            .that().resideInAPackage("com.kyovo.adapter.persistence..")
+            .that().resideInAPackage("com.kyovo.infrastructure.persistence..")
             .should().dependOnClassesThat()
-            .resideInAPackage("com.kyovo.adapter.web..")
+            .resideInAPackage("com.kyovo.infrastructure.api..")
             .check(importedClasses)
     }
 
@@ -64,7 +64,7 @@ class ArchitectureTest
     fun `persistence adapters follow naming convention`()
     {
         classes()
-            .that().resideInAPackage("com.kyovo.adapter.persistence.adapter..")
+            .that().resideInAPackage("com.kyovo.infrastructure.persistence.adapter..")
             .should().haveSimpleNameEndingWith("Adapter")
             .check(importedClasses)
     }

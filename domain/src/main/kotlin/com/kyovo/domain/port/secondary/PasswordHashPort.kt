@@ -1,6 +1,6 @@
 package com.kyovo.domain.port.secondary
 
-import com.kyovo.domain.model.UserPassword
+import com.kyovo.domain.model.user.UserPassword
 
 interface PasswordHashPort
 {

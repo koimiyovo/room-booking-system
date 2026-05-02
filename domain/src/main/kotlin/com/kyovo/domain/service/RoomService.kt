@@ -1,8 +1,8 @@
 package com.kyovo.domain.service
 
-import com.kyovo.domain.model.NewRoom
-import com.kyovo.domain.model.Room
-import com.kyovo.domain.model.RoomId
+import com.kyovo.domain.model.room.NewRoom
+import com.kyovo.domain.model.room.Room
+import com.kyovo.domain.model.room.RoomId
 import com.kyovo.domain.port.primary.RoomUseCase
 import com.kyovo.domain.port.secondary.RoomRepository
 

@@ -1,7 +1,8 @@
 package com.kyovo.domain.service
 
 import com.kyovo.domain.exception.*
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.booking.*
+import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.port.primary.BookingUseCase
 import com.kyovo.domain.port.secondary.BookingRepository
 import com.kyovo.domain.port.secondary.RoomRepository
@@ -44,7 +45,12 @@ class BookingService(
         }
     }
 
-    override fun cancel(bookingId: BookingId, cancelledBy: UserId, isAdmin: Boolean, reason: BookingCancellationReason?): Booking
+    override fun cancel(
+        bookingId: BookingId,
+        cancelledBy: UserId,
+        isAdmin: Boolean,
+        reason: BookingCancellationReason?
+    ): Booking
     {
         return transactionPort.executeInTransaction {
             val booking = bookingRepository.findById(bookingId) ?: throw BookingNotFoundException(bookingId)

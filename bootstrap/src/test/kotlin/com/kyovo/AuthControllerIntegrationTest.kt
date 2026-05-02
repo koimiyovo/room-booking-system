@@ -1,11 +1,11 @@
 package com.kyovo
 
-import com.kyovo.adapter.persistence.entity.UserEntity
-import com.kyovo.adapter.persistence.repository.UserJpaRepository
-import com.kyovo.adapter.web.dto.LoginRequest
-import com.kyovo.adapter.web.dto.RegisterRequest
 import com.kyovo.config.TestTimeProviderConfig
-import com.kyovo.provider.MutableTimeProvider
+import com.kyovo.infrastructure.api.dto.LoginRequest
+import com.kyovo.infrastructure.api.dto.RegisterRequest
+import com.kyovo.infrastructure.persistence.entity.UserEntity
+import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
+import com.kyovo.infrastructure.provider.MutableTimeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -90,12 +90,14 @@ class AuthControllerIntegrationTest
     {
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "Alice",
-                "alice@example.com",
-                passwordEncoder.encode("password")!!,
-                "USER",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "Alice",
+                email = "alice@example.com",
+                password = passwordEncoder.encode("password")!!,
+                role = "USER",
+                registeredAt = OffsetDateTime.now(),
+                status = "CREATED",
+                since = OffsetDateTime.now(),
             )
         )
 
@@ -116,12 +118,14 @@ class AuthControllerIntegrationTest
     {
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "Alice",
-                "alice@example.com",
-                passwordEncoder.encode("password")!!,
-                "USER",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "Alice",
+                email = "alice@example.com",
+                password = passwordEncoder.encode("password")!!,
+                role = "USER",
+                registeredAt = OffsetDateTime.now(),
+                status = "CREATED",
+                since = OffsetDateTime.now(),
             )
         )
 

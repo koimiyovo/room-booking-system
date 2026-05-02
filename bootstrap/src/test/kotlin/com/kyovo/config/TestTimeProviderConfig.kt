@@ -1,6 +1,6 @@
 package com.kyovo.config
 
-import com.kyovo.provider.MutableTimeProvider
+import com.kyovo.infrastructure.provider.MutableTimeProvider
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary

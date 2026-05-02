@@ -1,0 +1,68 @@
+package com.kyovo.infrastructure.api.controller
+
+import com.kyovo.domain.model.room.RoomId
+import com.kyovo.domain.port.primary.RoomUseCase
+import com.kyovo.infrastructure.api.dto.CreateRoomRequest
+import com.kyovo.infrastructure.api.dto.CreateRoomResponse
+import com.kyovo.infrastructure.api.dto.RoomResponse
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
+import java.util.*
+
+@RestController
+@RequestMapping("/api/rooms")
+@Tag(name = "Rooms", description = "Room management")
+class RoomController(private val roomUseCase: RoomUseCase)
+{
+    @GetMapping
+    @Operation(summary = "List all rooms")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Room list returned successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required")
+    )
+    fun findAll(): List<RoomResponse>
+    {
+        return roomUseCase.findAll().map { RoomResponse.fromDomain(it) }
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get a room by its identifier")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Room found"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "404", description = "Room not found")
+    )
+    fun findById(
+        @Parameter(description = "UUID identifier of the room")
+        @PathVariable id: UUID
+    ): ResponseEntity<RoomResponse>
+    {
+        return roomUseCase.findById(RoomId(id))
+            ?.let { ResponseEntity.ok(RoomResponse.fromDomain(it)) }
+            ?: ResponseEntity.notFound().build()
+    }
+
+    @PostMapping
+    @Operation(summary = "Create a new room")
+    @ApiResponses(
+        ApiResponse(responseCode = "201", description = "Room created successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Admin role required")
+    )
+    fun create(@RequestBody request: CreateRoomRequest): ResponseEntity<CreateRoomResponse>
+    {
+        val room = roomUseCase.save(request.toNewRoom())
+        val response = CreateRoomResponse(
+            id = room.id.value,
+            name = room.name.value,
+            capacity = room.capacity.value
+        )
+        return ResponseEntity(response, HttpStatus.CREATED)
+    }
+}

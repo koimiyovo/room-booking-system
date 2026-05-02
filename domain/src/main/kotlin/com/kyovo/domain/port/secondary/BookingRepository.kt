@@ -1,11 +1,11 @@
 package com.kyovo.domain.port.secondary
 
-import com.kyovo.domain.model.Booking
-import com.kyovo.domain.model.BookingEndDate
-import com.kyovo.domain.model.BookingId
-import com.kyovo.domain.model.BookingStartDate
-import com.kyovo.domain.model.RoomId
-import com.kyovo.domain.model.UserId
+import com.kyovo.domain.model.booking.Booking
+import com.kyovo.domain.model.booking.BookingEndDate
+import com.kyovo.domain.model.booking.BookingId
+import com.kyovo.domain.model.booking.BookingStartDate
+import com.kyovo.domain.model.room.RoomId
+import com.kyovo.domain.model.user.UserId
 
 interface BookingRepository
 {

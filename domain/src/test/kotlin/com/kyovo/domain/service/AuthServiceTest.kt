@@ -2,7 +2,7 @@ package com.kyovo.domain.service
 
 import com.kyovo.domain.exception.EmailAlreadyUsedException
 import com.kyovo.domain.exception.InvalidCredentialsException
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.secondary.ClockPort
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.UserRepository
@@ -35,7 +35,8 @@ class AuthServiceTest
         UserEmail("alice@example.com"),
         UserPassword("hashed"),
         UserRole.USER,
-        UserRegistrationDate(clockPort.now())
+        UserRegistrationDate(clockPort.now()),
+        UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(clockPort.now()))
     )
 
     @Test
@@ -51,6 +52,7 @@ class AuthServiceTest
 
         verify(userRepository).save(captor.capture())
         assertThat(captor.firstValue.password).isEqualTo(UserPassword("hashed"))
+        verify(userRepository).saveStatusHistory(any(), any(), any())
     }
 
     @Test
@@ -64,6 +66,7 @@ class AuthServiceTest
         val result = authService.register(newUser)
 
         assertThat(result).isEqualTo(existingUser)
+        verify(userRepository).saveStatusHistory(any(), any(), any())
     }
 
     @Test

@@ -1,8 +1,8 @@
 package com.kyovo.domain.port.primary
 
-import com.kyovo.domain.model.NewUser
-import com.kyovo.domain.model.User
-import com.kyovo.domain.model.UserEmail
+import com.kyovo.domain.model.user.NewUser
+import com.kyovo.domain.model.user.User
+import com.kyovo.domain.model.user.UserEmail
 
 interface AuthUseCase
 {

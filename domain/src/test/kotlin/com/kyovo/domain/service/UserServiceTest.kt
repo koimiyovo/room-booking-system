@@ -1,14 +1,20 @@
 package com.kyovo.domain.service
 
+import com.kyovo.domain.exception.AccountNotOwnedByUserException
 import com.kyovo.domain.exception.EmailAlreadyUsedException
+import com.kyovo.domain.exception.UserAlreadyActiveException
 import com.kyovo.domain.exception.UserNotFoundException
-import com.kyovo.domain.model.*
+import com.kyovo.domain.model.user.*
+import com.kyovo.domain.port.secondary.ClockPort
 import com.kyovo.domain.port.secondary.PasswordHashPort
+import com.kyovo.domain.port.secondary.TransactionPort
 import com.kyovo.domain.port.secondary.UserRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -19,7 +25,9 @@ class UserServiceTest
 {
     private val userRepository: UserRepository = mock()
     private val passwordHashPort: PasswordHashPort = mock()
-    private val userService = UserService(userRepository, passwordHashPort)
+    private val transactionPort: TransactionPort = mock()
+    private val clockPort: ClockPort = mock()
+    private val userService = UserService(userRepository, passwordHashPort, transactionPort, clockPort)
 
     private val userId = UserId(UUID.randomUUID())
     private val existingUser = User(
@@ -28,8 +36,17 @@ class UserServiceTest
         UserEmail("alice@example.com"),
         UserPassword("hashed"),
         UserRole.USER,
-        UserRegistrationDate(OffsetDateTime.now())
+        UserRegistrationDate(OffsetDateTime.now()),
+        UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()))
     )
+
+    @BeforeEach
+    fun setUp()
+    {
+        whenever(clockPort.now()).thenReturn(OffsetDateTime.now())
+        doAnswer { (it.arguments[0] as Function0<*>).invoke() }
+            .whenever(transactionPort).executeInTransaction<Any>(any<() -> Any>())
+    }
 
     @Test
     fun `findAll returns all users from the repository`()
@@ -124,5 +141,73 @@ class UserServiceTest
 
         assertThatThrownBy { userService.delete(userId) }
             .isInstanceOf(UserNotFoundException::class.java)
+    }
+
+    @Test
+    fun `validate changes the user status to ACTIVE when it exists`()
+    {
+        val activeUser = existingUser.copy(
+            statusInfo = UserStatusInfo(
+                status = UserStatus.ACTIVE,
+                since = UserStatusInfoDate(OffsetDateTime.now())
+            )
+        )
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
+        whenever(userRepository.update(any())).thenReturn(activeUser)
+
+        val result = userService.validate(userId, isAdmin = false, validateBy = userId)
+
+        assertThat(result.statusInfo.status).isEqualTo(UserStatus.ACTIVE)
+    }
+
+    @Test
+    fun `validate records status history after successful transition`()
+    {
+        val activeUser = existingUser.copy(
+            statusInfo = UserStatusInfo(
+                status = UserStatus.ACTIVE,
+                since = UserStatusInfoDate(OffsetDateTime.now())
+            )
+        )
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
+        whenever(userRepository.update(any())).thenReturn(activeUser)
+
+        userService.validate(userId, isAdmin = false, validateBy = userId)
+
+        verify(userRepository).saveStatusHistory(activeUser.id, UserStatus.ACTIVE, activeUser.statusInfo.since)
+    }
+
+    @Test
+    fun `validate throws UserNotFoundException when user does not exist`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(null)
+
+        assertThatThrownBy { userService.validate(userId, isAdmin = false, validateBy = userId) }
+            .isInstanceOf(UserNotFoundException::class.java)
+    }
+
+    @Test
+    fun `validate throws AccountNotOwnedByUserException when non-admin user validates another account`()
+    {
+        val otherId = UserId(UUID.randomUUID())
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
+
+        assertThatThrownBy { userService.validate(userId, isAdmin = false, validateBy = otherId) }
+            .isInstanceOf(AccountNotOwnedByUserException::class.java)
+    }
+
+    @Test
+    fun `validate throws UserAlreadyActiveException when user is already active`()
+    {
+        val activeUser = existingUser.copy(
+            statusInfo = UserStatusInfo(
+                status = UserStatus.ACTIVE,
+                since = UserStatusInfoDate(OffsetDateTime.now())
+            )
+        )
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
+
+        assertThatThrownBy { userService.validate(userId, isAdmin = false, validateBy = userId) }
+            .isInstanceOf(UserAlreadyActiveException::class.java)
     }
 }

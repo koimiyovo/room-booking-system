@@ -1,11 +1,13 @@
 package com.kyovo
 
-import com.kyovo.adapter.persistence.entity.UserEntity
-import com.kyovo.adapter.persistence.repository.UserJpaRepository
-import com.kyovo.adapter.web.dto.LoginRequest
-import com.kyovo.adapter.web.dto.RegisterRequest
-import com.kyovo.adapter.web.dto.UpdateUserRequest
 import com.kyovo.config.TestTimeProviderConfig
+import com.kyovo.infrastructure.api.dto.LoginRequest
+import com.kyovo.infrastructure.api.dto.RegisterRequest
+import com.kyovo.infrastructure.api.dto.UpdateUserRequest
+import com.kyovo.infrastructure.persistence.entity.UserEntity
+import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
+import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
+import com.kyovo.infrastructure.provider.MutableTimeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -17,7 +19,9 @@ import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.*
 import tools.jackson.databind.ObjectMapper
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.*
 
 @SpringBootTest
@@ -35,24 +39,35 @@ class UserControllerIntegrationTest
     private lateinit var userJpaRepository: UserJpaRepository
 
     @Autowired
+    private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var aliceToken: String
     private lateinit var aliceId: String
 
+    @Autowired
+    lateinit var timeProvider: MutableTimeProvider
+
     @BeforeEach
     fun setUp()
     {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 2, 1, 10, 0), ZoneOffset.UTC))
+
+        userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "Admin",
-                "admin@test.com",
-                passwordEncoder.encode("admin123")!!,
-                "ADMIN",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "Admin",
+                email = "admin@test.com",
+                password = passwordEncoder.encode("admin123")!!,
+                role = "ADMIN",
+                registeredAt = timeProvider.now(),
+                status = "CREATED",
+                since = timeProvider.now(),
             )
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
@@ -104,6 +119,8 @@ class UserControllerIntegrationTest
             status { isOk() }
             jsonPath("$.id") { value(aliceId) }
             jsonPath("$.name") { value("Alice") }
+            jsonPath("$.status_info.status") { value("CREATED") }
+            jsonPath("$.status_info.since") { value("2026-02-01T10:00:00Z") }
         }
     }
 
@@ -122,12 +139,37 @@ class UserControllerIntegrationTest
     {
         val savedUser = userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "Alice",
-                "alice@example.com",
-                passwordEncoder.encode("password")!!,
-                "INVALID_ROLE",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "Alice",
+                email = "alice@example.com",
+                password = passwordEncoder.encode("password")!!,
+                role = "INVALID_ROLE",
+                registeredAt = timeProvider.now(),
+                status = "CREATED",
+                since = timeProvider.now(),
+            )
+        )
+
+        mockMvc.get("/api/users/${savedUser.id}") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isInternalServerError() }
+        }
+    }
+
+    @Test
+    fun `GET api-users-id returns 500 when user status is invalid`()
+    {
+        val savedUser = userJpaRepository.save(
+            UserEntity(
+                id = UUID.randomUUID(),
+                name = "Alice",
+                email = "alice@example.com",
+                password = passwordEncoder.encode("password")!!,
+                role = "USER",
+                registeredAt = timeProvider.now(),
+                status = "INVALID_STATUS",
+                since = timeProvider.now(),
             )
         )
 
@@ -197,6 +239,97 @@ class UserControllerIntegrationTest
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-validate returns 200 and transitions status to ACTIVE`()
+    {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
+
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.id") { value(aliceId) }
+            jsonPath("$.status_info.status") { value("ACTIVE") }
+            jsonPath("$.status_info.since") { value("2026-03-01T12:00:00Z") }
+        }
+
+        val entity = userJpaRepository.findById(UUID.fromString(aliceId)).orElseThrow()
+        assertThat(entity.status).isEqualTo("ACTIVE")
+    }
+
+    @Test
+    fun `POST api-users-id-validate records status history with closed CREATED entry and new ACTIVE entry`()
+    {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
+
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isOk() }
+        }
+
+        val registrationTime = OffsetDateTime.of(LocalDateTime.of(2026, 2, 1, 10, 0), ZoneOffset.UTC)
+        val validationTime = OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC)
+
+        val history = userStatusHistoryJpaRepository.findAllByUserId(UUID.fromString(aliceId))
+            .sortedBy { it.since }
+        assertThat(history).hasSize(2)
+
+        val createdEntry = history[0]
+        assertThat(createdEntry.status).isEqualTo("CREATED")
+        assertThat(createdEntry.since).isEqualTo(registrationTime)
+        assertThat(createdEntry.until).isEqualTo(validationTime)
+
+        val activeEntry = history[1]
+        assertThat(activeEntry.status).isEqualTo("ACTIVE")
+        assertThat(activeEntry.since).isEqualTo(validationTime)
+        assertThat(activeEntry.until).isNull()
+    }
+
+    @Test
+    fun `POST api-users-id-validate returns 403 when non-admin user validates another account`()
+    {
+        val otherResult = mockMvc.post("/api/auth/register") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(RegisterRequest("Bob", "bob@test.com", "bob123"))
+        }.andReturn()
+        val bobId = objectMapper.readTree(otherResult.response.contentAsString)["id"].asString()
+
+        mockMvc.post("/api/users/$bobId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-validate returns 409 when account is already active`()
+    {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect { status { isOk() } }
+
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-validate returns 200 when admin validates a user`()
+    {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
+
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status_info.status") { value("ACTIVE") }
         }
     }
 }

@@ -1,11 +1,11 @@
 package com.kyovo
 
-import com.kyovo.adapter.persistence.entity.UserEntity
-import com.kyovo.adapter.persistence.repository.RoomJpaRepository
-import com.kyovo.adapter.persistence.repository.UserJpaRepository
-import com.kyovo.adapter.web.dto.CreateRoomRequest
-import com.kyovo.adapter.web.dto.LoginRequest
 import com.kyovo.config.TestTimeProviderConfig
+import com.kyovo.infrastructure.api.dto.CreateRoomRequest
+import com.kyovo.infrastructure.api.dto.LoginRequest
+import com.kyovo.infrastructure.persistence.entity.UserEntity
+import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
+import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -52,22 +52,26 @@ class RoomControllerIntegrationTest
 
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "Admin",
-                "admin@test.com",
-                passwordEncoder.encode("admin123")!!,
-                "ADMIN",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "Admin",
+                email = "admin@test.com",
+                password = passwordEncoder.encode("admin123")!!,
+                role = "ADMIN",
+                registeredAt = OffsetDateTime.now(),
+                status = "CREATED",
+                since = OffsetDateTime.now(),
             )
         )
         userJpaRepository.save(
             UserEntity(
-                UUID.randomUUID(),
-                "User",
-                "user@test.com",
-                passwordEncoder.encode("user123")!!,
-                "USER",
-                OffsetDateTime.now()
+                id = UUID.randomUUID(),
+                name = "User",
+                email = "user@test.com",
+                password = passwordEncoder.encode("user123")!!,
+                role = "USER",
+                registeredAt = OffsetDateTime.now(),
+                status = "CREATED",
+                since = OffsetDateTime.now(),
             )
         )
 
