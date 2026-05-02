@@ -49,9 +49,10 @@ class AppConfig
     fun bookingUseCase(
         bookingRepository: BookingRepository,
         roomRepository: RoomRepository,
-        transactionPort: TransactionPort
+        transactionPort: TransactionPort,
+        userRepository: UserRepository
     ): BookingService
     {
-        return BookingService(bookingRepository, roomRepository, transactionPort)
+        return BookingService(bookingRepository, roomRepository, transactionPort, userRepository)
     }
 }

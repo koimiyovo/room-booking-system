@@ -332,4 +332,135 @@ class UserControllerIntegrationTest
             jsonPath("$.status_info.status") { value("ACTIVE") }
         }
     }
+
+    @Test
+    fun `POST api-users-id-deactivate returns 200 and transitions status to INACTIVE`()
+    {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect { status { isOk() } }
+
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 4, 1, 9, 0), ZoneOffset.UTC))
+
+        mockMvc.post("/api/users/$aliceId/deactivate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status_info.status") { value("INACTIVE") }
+            jsonPath("$.status_info.since") { value("2026-04-01T09:00:00Z") }
+        }
+
+        val entity = userJpaRepository.findById(UUID.fromString(aliceId)).orElseThrow()
+        assertThat(entity.status).isEqualTo("INACTIVE")
+    }
+
+    @Test
+    fun `POST api-users-id-deactivate returns 403 when called by a non-admin user`()
+    {
+        mockMvc.post("/api/users/$aliceId/deactivate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-deactivate returns 409 when account is not active`()
+    {
+        mockMvc.post("/api/users/$aliceId/deactivate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-reactivate returns 200 and transitions status back to ACTIVE`()
+    {
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect { status { isOk() } }
+        mockMvc.post("/api/users/$aliceId/deactivate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect { status { isOk() } }
+
+        timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 5, 1, 8, 0), ZoneOffset.UTC))
+
+        mockMvc.post("/api/users/$aliceId/reactivate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status_info.status") { value("ACTIVE") }
+            jsonPath("$.status_info.since") { value("2026-05-01T08:00:00Z") }
+        }
+
+        val entity = userJpaRepository.findById(UUID.fromString(aliceId)).orElseThrow()
+        assertThat(entity.status).isEqualTo("ACTIVE")
+    }
+
+    @Test
+    fun `POST api-users-id-reactivate returns 403 when called by a non-admin user`()
+    {
+        mockMvc.post("/api/users/$aliceId/reactivate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-reactivate returns 409 when account is not inactive`()
+    {
+        mockMvc.post("/api/users/$aliceId/reactivate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    @Test
+    fun `deactivate and reactivate record full status history`()
+    {
+        val registrationTime = OffsetDateTime.of(LocalDateTime.of(2026, 2, 1, 10, 0), ZoneOffset.UTC)
+        val validationTime = OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC)
+        val deactivationTime = OffsetDateTime.of(LocalDateTime.of(2026, 4, 1, 9, 0), ZoneOffset.UTC)
+        val reactivationTime = OffsetDateTime.of(LocalDateTime.of(2026, 5, 1, 8, 0), ZoneOffset.UTC)
+
+        timeProvider.setNow(validationTime)
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect { status { isOk() } }
+
+        timeProvider.setNow(deactivationTime)
+        mockMvc.post("/api/users/$aliceId/deactivate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect { status { isOk() } }
+
+        timeProvider.setNow(reactivationTime)
+        mockMvc.post("/api/users/$aliceId/reactivate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect { status { isOk() } }
+
+        val history = userStatusHistoryJpaRepository.findAllByUserId(UUID.fromString(aliceId))
+            .sortedBy { it.since }
+        assertThat(history).hasSize(4)
+
+        assertThat(history[0].status).isEqualTo("CREATED")
+        assertThat(history[0].since).isEqualTo(registrationTime)
+        assertThat(history[0].until).isEqualTo(validationTime)
+
+        assertThat(history[1].status).isEqualTo("ACTIVE")
+        assertThat(history[1].since).isEqualTo(validationTime)
+        assertThat(history[1].until).isEqualTo(deactivationTime)
+
+        assertThat(history[2].status).isEqualTo("INACTIVE")
+        assertThat(history[2].since).isEqualTo(deactivationTime)
+        assertThat(history[2].until).isEqualTo(reactivationTime)
+
+        assertThat(history[3].status).isEqualTo("ACTIVE")
+        assertThat(history[3].since).isEqualTo(reactivationTime)
+        assertThat(history[3].until).isNull()
+    }
 }

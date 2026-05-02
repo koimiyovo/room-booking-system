@@ -6,10 +6,11 @@ import com.kyovo.domain.model.room.Room
 import com.kyovo.domain.model.room.RoomCapacity
 import com.kyovo.domain.model.room.RoomId
 import com.kyovo.domain.model.room.RoomName
-import com.kyovo.domain.model.user.UserId
+import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.secondary.BookingRepository
 import com.kyovo.domain.port.secondary.RoomRepository
 import com.kyovo.domain.port.secondary.TransactionPort
+import com.kyovo.domain.port.secondary.UserRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -17,17 +18,19 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.util.*
 
 class BookingServiceTest
 {
     private val bookingRepository: BookingRepository = mock()
     private val roomRepository: RoomRepository = mock()
+    private val userRepository: UserRepository = mock()
     private val transactionPort = object : TransactionPort
     {
         override fun <T> executeInTransaction(block: () -> T): T = block()
     }
-    private val bookingService = BookingService(bookingRepository, roomRepository, transactionPort)
+    private val bookingService = BookingService(bookingRepository, roomRepository, transactionPort, userRepository)
 
     private val roomId = RoomId(UUID.randomUUID())
     private val userId = UserId(UUID.randomUUID())
@@ -36,12 +39,26 @@ class BookingServiceTest
     private val endDate = BookingEndDate(LocalDate.of(2026, 6, 3))
     private val newBooking = NewBooking(roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)
 
+    private val activeUser = User(
+        userId,
+        UserName("Alice"),
+        UserEmail("alice@example.com"),
+        UserPassword("hashed"),
+        UserRole.USER,
+        UserRegistrationDate(OffsetDateTime.now()),
+        UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+    )
+    private val inactiveUser = activeUser.copy(
+        statusInfo = UserStatusInfo(status = UserStatus.INACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+    )
+
     private fun confirmedBooking(id: BookingId = BookingId(UUID.randomUUID())): Booking =
         Booking(id, roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null, null)
 
     @Test
     fun `create returns booking when room exists and no conflict`()
     {
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
         whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(room)
         whenever(bookingRepository.existsOverlappingBooking(roomId, startDate, endDate)).thenReturn(false)
         whenever(bookingRepository.save(any())).thenAnswer { it.getArgument<Booking>(0) }
@@ -54,8 +71,43 @@ class BookingServiceTest
     }
 
     @Test
+    fun `create throws AccountInactiveException when user account is inactive`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(inactiveUser)
+
+        assertThatThrownBy { bookingService.create(newBooking) }
+            .isInstanceOf(AccountInactiveException::class.java)
+    }
+
+    @Test
+    fun `create succeeds when user account is in CREATED status`()
+    {
+        val createdUser = activeUser.copy(
+            statusInfo = UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()))
+        )
+        whenever(userRepository.findById(userId)).thenReturn(createdUser)
+        whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(room)
+        whenever(bookingRepository.existsOverlappingBooking(roomId, startDate, endDate)).thenReturn(false)
+        whenever(bookingRepository.save(any())).thenAnswer { it.getArgument<Booking>(0) }
+
+        val result = bookingService.create(newBooking)
+
+        assertThat(result.status).isEqualTo(BookingStatus.CONFIRMED)
+    }
+
+    @Test
+    fun `create throws UserNotFoundException when user does not exist`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(null)
+
+        assertThatThrownBy { bookingService.create(newBooking) }
+            .isInstanceOf(UserNotFoundException::class.java)
+    }
+
+    @Test
     fun `create throws RoomNotFoundException when room does not exist`()
     {
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
         whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(null)
 
         assertThatThrownBy { bookingService.create(newBooking) }
@@ -66,6 +118,7 @@ class BookingServiceTest
     fun `create throws RoomCapacityExceededException when number of people exceeds room capacity`()
     {
         val oversizedBooking = newBooking.copy(numberOfPeople = BookingNumberOfPeople(15))
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
         whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(room)
 
         assertThatThrownBy { bookingService.create(oversizedBooking) }
@@ -75,6 +128,7 @@ class BookingServiceTest
     @Test
     fun `create throws BookingConflictException when room is already booked for the period`()
     {
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
         whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(room)
         whenever(bookingRepository.existsOverlappingBooking(roomId, startDate, endDate)).thenReturn(true)
 

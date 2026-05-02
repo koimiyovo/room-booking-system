@@ -2,7 +2,7 @@ package com.kyovo.domain.service
 
 import com.kyovo.domain.exception.AccountNotOwnedByUserException
 import com.kyovo.domain.exception.EmailAlreadyUsedException
-import com.kyovo.domain.exception.UserAlreadyActiveException
+import com.kyovo.domain.exception.InvalidStatusTransitionException
 import com.kyovo.domain.exception.UserNotFoundException
 import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.secondary.ClockPort
@@ -38,6 +38,12 @@ class UserServiceTest
         UserRole.USER,
         UserRegistrationDate(OffsetDateTime.now()),
         UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()))
+    )
+    private val activeUser = existingUser.copy(
+        statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+    )
+    private val inactiveUser = existingUser.copy(
+        statusInfo = UserStatusInfo(status = UserStatus.INACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
     )
 
     @BeforeEach
@@ -146,12 +152,6 @@ class UserServiceTest
     @Test
     fun `validate changes the user status to ACTIVE when it exists`()
     {
-        val activeUser = existingUser.copy(
-            statusInfo = UserStatusInfo(
-                status = UserStatus.ACTIVE,
-                since = UserStatusInfoDate(OffsetDateTime.now())
-            )
-        )
         whenever(userRepository.findById(userId)).thenReturn(existingUser)
         whenever(userRepository.update(any())).thenReturn(activeUser)
 
@@ -163,12 +163,6 @@ class UserServiceTest
     @Test
     fun `validate records status history after successful transition`()
     {
-        val activeUser = existingUser.copy(
-            statusInfo = UserStatusInfo(
-                status = UserStatus.ACTIVE,
-                since = UserStatusInfoDate(OffsetDateTime.now())
-            )
-        )
         whenever(userRepository.findById(userId)).thenReturn(existingUser)
         whenever(userRepository.update(any())).thenReturn(activeUser)
 
@@ -197,17 +191,91 @@ class UserServiceTest
     }
 
     @Test
-    fun `validate throws UserAlreadyActiveException when user is already active`()
+    fun `validate throws InvalidStatusTransitionException when account is already active`()
     {
-        val activeUser = existingUser.copy(
-            statusInfo = UserStatusInfo(
-                status = UserStatus.ACTIVE,
-                since = UserStatusInfoDate(OffsetDateTime.now())
-            )
-        )
         whenever(userRepository.findById(userId)).thenReturn(activeUser)
 
         assertThatThrownBy { userService.validate(userId, isAdmin = false, validateBy = userId) }
-            .isInstanceOf(UserAlreadyActiveException::class.java)
+            .isInstanceOf(InvalidStatusTransitionException::class.java)
+    }
+
+    @Test
+    fun `deactivate changes the user status to INACTIVE when account is active`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
+        whenever(userRepository.update(any())).thenReturn(inactiveUser)
+
+        val result = userService.deactivate(userId)
+
+        assertThat(result.statusInfo.status).isEqualTo(UserStatus.INACTIVE)
+    }
+
+    @Test
+    fun `deactivate records status history after successful transition`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
+        whenever(userRepository.update(any())).thenReturn(inactiveUser)
+
+        userService.deactivate(userId)
+
+        verify(userRepository).saveStatusHistory(inactiveUser.id, UserStatus.INACTIVE, inactiveUser.statusInfo.since)
+    }
+
+    @Test
+    fun `deactivate throws UserNotFoundException when user does not exist`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(null)
+
+        assertThatThrownBy { userService.deactivate(userId) }
+            .isInstanceOf(UserNotFoundException::class.java)
+    }
+
+    @Test
+    fun `deactivate throws InvalidStatusTransitionException when account is not active`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
+
+        assertThatThrownBy { userService.deactivate(userId) }
+            .isInstanceOf(InvalidStatusTransitionException::class.java)
+    }
+
+    @Test
+    fun `reactivate changes the user status to ACTIVE when account is inactive`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(inactiveUser)
+        whenever(userRepository.update(any())).thenReturn(activeUser)
+
+        val result = userService.reactivate(userId)
+
+        assertThat(result.statusInfo.status).isEqualTo(UserStatus.ACTIVE)
+    }
+
+    @Test
+    fun `reactivate records status history after successful transition`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(inactiveUser)
+        whenever(userRepository.update(any())).thenReturn(activeUser)
+
+        userService.reactivate(userId)
+
+        verify(userRepository).saveStatusHistory(activeUser.id, UserStatus.ACTIVE, activeUser.statusInfo.since)
+    }
+
+    @Test
+    fun `reactivate throws UserNotFoundException when user does not exist`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(null)
+
+        assertThatThrownBy { userService.reactivate(userId) }
+            .isInstanceOf(UserNotFoundException::class.java)
+    }
+
+    @Test
+    fun `reactivate throws InvalidStatusTransitionException when account is not inactive`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
+
+        assertThatThrownBy { userService.reactivate(userId) }
+            .isInstanceOf(InvalidStatusTransitionException::class.java)
     }
 }

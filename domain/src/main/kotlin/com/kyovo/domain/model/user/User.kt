@@ -10,8 +10,8 @@ data class User(
     val statusInfo: UserStatusInfo
 )
 {
-    fun isActive(): Boolean
+    fun isInactive(): Boolean
     {
-        return statusInfo.isActive()
+        return statusInfo.isInactive()
     }
 }

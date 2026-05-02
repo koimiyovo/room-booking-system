@@ -5,7 +5,8 @@ import com.kyovo.domain.model.user.UserStatus
 enum class UserStatusResponse
 {
     CREATED,
-    ACTIVE;
+    ACTIVE,
+    INACTIVE;
 
     companion object
     {
@@ -15,6 +16,7 @@ enum class UserStatusResponse
             {
                 UserStatus.CREATED -> CREATED
                 UserStatus.ACTIVE -> ACTIVE
+                UserStatus.INACTIVE -> INACTIVE
             }
         }
     }

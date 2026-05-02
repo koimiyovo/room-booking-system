@@ -5,8 +5,8 @@ data class UserStatusInfo(
     val since: UserStatusInfoDate
 )
 {
-    fun isActive(): Boolean
+    fun isInactive(): Boolean
     {
-        return status == UserStatus.ACTIVE
+        return status == UserStatus.INACTIVE
     }
 }

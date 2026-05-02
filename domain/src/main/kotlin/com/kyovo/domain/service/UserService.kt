@@ -2,7 +2,7 @@ package com.kyovo.domain.service
 
 import com.kyovo.domain.exception.AccountNotOwnedByUserException
 import com.kyovo.domain.exception.EmailAlreadyUsedException
-import com.kyovo.domain.exception.UserAlreadyActiveException
+import com.kyovo.domain.exception.InvalidStatusTransitionException
 import com.kyovo.domain.exception.UserNotFoundException
 import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.primary.UserUseCase
@@ -53,23 +53,38 @@ class UserService(
     {
         return transactionPort.executeInTransaction {
             val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
-
             if (!isAdmin && user.id != validateBy)
                 throw AccountNotOwnedByUserException()
+            if (user.statusInfo.status != UserStatus.CREATED)
+                throw InvalidStatusTransitionException(user.statusInfo.status, UserStatus.ACTIVE)
+            transitionTo(user, UserStatus.ACTIVE)
+        }
+    }
 
-            if (user.isActive())
-                throw UserAlreadyActiveException(id)
+    override fun deactivate(id: UserId): User
+    {
+        val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
+        return transitionTo(user, UserStatus.INACTIVE)
+    }
 
-            val updatedUser = userRepository.update(
-                user.copy(
-                    statusInfo = UserStatusInfo(
-                        status = UserStatus.ACTIVE,
-                        since = UserStatusInfoDate(clockPort.now())
-                    )
-                )
-            )
-            userRepository.saveStatusHistory(updatedUser.id, updatedUser.statusInfo.status, updatedUser.statusInfo.since)
-            updatedUser
+    override fun reactivate(id: UserId): User
+    {
+        val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
+        if (user.statusInfo.status != UserStatus.INACTIVE)
+            throw InvalidStatusTransitionException(user.statusInfo.status, UserStatus.ACTIVE)
+        return transitionTo(user, UserStatus.ACTIVE)
+    }
+
+    private fun transitionTo(user: User, target: UserStatus): User
+    {
+        if (!user.statusInfo.status.canTransitionTo(target))
+            throw InvalidStatusTransitionException(user.statusInfo.status, target)
+        val now = UserStatusInfoDate(clockPort.now())
+        val updated = user.copy(statusInfo = UserStatusInfo(target, now))
+        return transactionPort.executeInTransaction {
+            val saved = userRepository.update(updated)
+            userRepository.saveStatusHistory(saved.id, saved.statusInfo.status, saved.statusInfo.since)
+            saved
         }
     }
 }

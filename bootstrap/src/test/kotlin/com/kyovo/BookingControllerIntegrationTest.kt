@@ -290,6 +290,28 @@ class BookingControllerIntegrationTest
     }
 
     @Test
+    fun `POST api-bookings returns 403 when user account is inactive`()
+    {
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect { status { isOk() } }
+        mockMvc.post("/api/users/$aliceId/deactivate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect { status { isOk() } }
+
+        val roomId = createRoom()
+        val request = CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 3), 5, null)
+
+        mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
     fun `GET api-bookings-my returns only the authenticated user bookings`()
     {
         val roomId = createRoom()

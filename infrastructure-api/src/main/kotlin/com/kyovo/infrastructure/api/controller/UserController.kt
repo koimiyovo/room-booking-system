@@ -98,7 +98,7 @@ class UserController(private val userUseCase: UserUseCase)
         ApiResponse(responseCode = "401", description = "Authentication required"),
         ApiResponse(responseCode = "403", description = "Access denied"),
         ApiResponse(responseCode = "404", description = "User not found"),
-        ApiResponse(responseCode = "409", description = "Account is already active")
+        ApiResponse(responseCode = "409", description = "Invalid status transition")
     )
     fun validate(
         @Parameter(description = "UUID identifier of the user")
@@ -113,9 +113,49 @@ class UserController(private val userUseCase: UserUseCase)
         return ResponseEntity.ok(UserResponse.fromDomain(user))
     }
 
-    private fun isAdminOrOwner(authentication: Authentication, targetId: UserId): Boolean
+    @PostMapping("/{id}/deactivate")
+    @Operation(summary = "Deactivate a user account")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Account deactivated successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Admin role required"),
+        ApiResponse(responseCode = "404", description = "User not found"),
+        ApiResponse(responseCode = "409", description = "Invalid status transition")
+    )
+    fun deactivate(
+        @Parameter(description = "UUID identifier of the user")
+        @PathVariable id: UUID,
+        authentication: Authentication
+    ): ResponseEntity<UserResponse>
     {
-        if (authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }) return true
-        return UserId(UUID.fromString(authentication.name)) == targetId
+        if (!isAdmin(authentication)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        val user = userUseCase.deactivate(UserId(id))
+        return ResponseEntity.ok(UserResponse.fromDomain(user))
     }
+
+    @PostMapping("/{id}/reactivate")
+    @Operation(summary = "Reactivate a user account")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Account reactivated successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Admin role required"),
+        ApiResponse(responseCode = "404", description = "User not found"),
+        ApiResponse(responseCode = "409", description = "Invalid status transition")
+    )
+    fun reactivate(
+        @Parameter(description = "UUID identifier of the user")
+        @PathVariable id: UUID,
+        authentication: Authentication
+    ): ResponseEntity<UserResponse>
+    {
+        if (!isAdmin(authentication)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        val user = userUseCase.reactivate(UserId(id))
+        return ResponseEntity.ok(UserResponse.fromDomain(user))
+    }
+
+    private fun isAdmin(authentication: Authentication): Boolean =
+        authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }
+
+    private fun isAdminOrOwner(authentication: Authentication, targetId: UserId): Boolean =
+        isAdmin(authentication) || UserId(UUID.fromString(authentication.name)) == targetId
 }
