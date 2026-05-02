@@ -57,14 +57,14 @@ class UserService(
                 throw AccountNotOwnedByUserException()
             if (user.statusInfo.status != UserStatus.CREATED)
                 throw InvalidStatusTransitionException(user.statusInfo.status, UserStatus.ACTIVE)
-            transitionTo(user, UserStatus.ACTIVE)
+            persistTransition(user, UserStatus.ACTIVE)
         }
     }
 
     override fun deactivate(id: UserId): User
     {
         val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
-        return transitionTo(user, UserStatus.INACTIVE)
+        return persistTransition(user, UserStatus.INACTIVE)
     }
 
     override fun reactivate(id: UserId): User
@@ -72,15 +72,15 @@ class UserService(
         val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
         if (user.statusInfo.status != UserStatus.INACTIVE)
             throw InvalidStatusTransitionException(user.statusInfo.status, UserStatus.ACTIVE)
-        return transitionTo(user, UserStatus.ACTIVE)
+        return persistTransition(user, UserStatus.ACTIVE)
     }
 
-    private fun transitionTo(user: User, target: UserStatus): User
+    private fun persistTransition(user: User, target: UserStatus): User
     {
-        if (!user.statusInfo.status.canTransitionTo(target))
-            throw InvalidStatusTransitionException(user.statusInfo.status, target)
         val now = UserStatusInfoDate(clockPort.now())
-        val updated = user.copy(statusInfo = UserStatusInfo(target, now))
+        val updated =
+            user.transitionTo(target, now) ?: throw InvalidStatusTransitionException(user.statusInfo.status, target)
+
         return transactionPort.executeInTransaction {
             val saved = userRepository.update(updated)
             userRepository.saveStatusHistory(saved.id, saved.statusInfo.status, saved.statusInfo.since)

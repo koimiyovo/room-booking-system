@@ -14,4 +14,11 @@ data class User(
     {
         return statusInfo.isInactive()
     }
+
+    fun transitionTo(target: UserStatus, now: UserStatusInfoDate): User?
+    {
+        if (!statusInfo.status.canTransitionTo(target))
+            return null
+        return copy(statusInfo = UserStatusInfo(target, now))
+    }
 }
