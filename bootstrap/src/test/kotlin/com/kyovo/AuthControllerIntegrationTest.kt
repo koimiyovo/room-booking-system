@@ -4,7 +4,9 @@ import com.kyovo.config.TestTimeProviderConfig
 import com.kyovo.infrastructure.api.dto.LoginRequest
 import com.kyovo.infrastructure.api.dto.RegisterRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
+import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
+import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
 import com.kyovo.infrastructure.provider.MutableTimeProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -38,6 +40,9 @@ class AuthControllerIntegrationTest
     private lateinit var userJpaRepository: UserJpaRepository
 
     @Autowired
+    private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
 
     @Autowired
@@ -47,6 +52,7 @@ class AuthControllerIntegrationTest
     fun setUp()
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 1, 1, 0, 0), ZoneOffset.UTC))
+        userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
     }
 
@@ -88,7 +94,7 @@ class AuthControllerIntegrationTest
     @Test
     fun `POST api-auth-login returns 200 with a valid token`()
     {
-        userJpaRepository.save(
+        val savedUser = userJpaRepository.save(
             UserEntity(
                 id = UUID.randomUUID(),
                 name = "Alice",
@@ -96,9 +102,10 @@ class AuthControllerIntegrationTest
                 password = passwordEncoder.encode("password")!!,
                 role = "USER",
                 registeredAt = OffsetDateTime.now(),
-                status = "CREATED",
-                since = OffsetDateTime.now(),
             )
+        )
+        userStatusHistoryJpaRepository.save(
+            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = savedUser.id, status = "CREATED", since = OffsetDateTime.now(), until = null)
         )
 
         val result = mockMvc.post("/api/auth/login") {
@@ -116,7 +123,7 @@ class AuthControllerIntegrationTest
     @Test
     fun `POST api-auth-login returns 401 when password is wrong`()
     {
-        userJpaRepository.save(
+        val savedUser = userJpaRepository.save(
             UserEntity(
                 id = UUID.randomUUID(),
                 name = "Alice",
@@ -124,9 +131,10 @@ class AuthControllerIntegrationTest
                 password = passwordEncoder.encode("password")!!,
                 role = "USER",
                 registeredAt = OffsetDateTime.now(),
-                status = "CREATED",
-                since = OffsetDateTime.now(),
             )
+        )
+        userStatusHistoryJpaRepository.save(
+            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = savedUser.id, status = "CREATED", since = OffsetDateTime.now(), until = null)
         )
 
         mockMvc.post("/api/auth/login") {

@@ -16,4 +16,6 @@ interface UserStatusHistoryJpaRepository : JpaRepository<UserStatusHistoryEntity
     fun closeCurrentEntry(userId: UUID, until: OffsetDateTime)
 
     fun findAllByUserId(userId: UUID): List<UserStatusHistoryEntity>
+
+    fun findByUserIdAndUntilIsNull(userId: UUID): UserStatusHistoryEntity?
 }

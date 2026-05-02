@@ -4,8 +4,10 @@ import com.kyovo.config.TestTimeProviderConfig
 import com.kyovo.infrastructure.api.dto.CreateRoomRequest
 import com.kyovo.infrastructure.api.dto.LoginRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
+import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
 import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
+import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -40,6 +42,9 @@ class RoomControllerIntegrationTest
     private lateinit var userJpaRepository: UserJpaRepository
 
     @Autowired
+    private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var userToken: String
@@ -48,31 +53,37 @@ class RoomControllerIntegrationTest
     fun setUp()
     {
         roomJpaRepository.deleteAll()
+        userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
+        val adminId = UUID.randomUUID()
         userJpaRepository.save(
             UserEntity(
-                id = UUID.randomUUID(),
+                id = adminId,
                 name = "Admin",
                 email = "admin@test.com",
                 password = passwordEncoder.encode("admin123")!!,
                 role = "ADMIN",
                 registeredAt = OffsetDateTime.now(),
-                status = "CREATED",
-                since = OffsetDateTime.now(),
             )
         )
+        userStatusHistoryJpaRepository.save(
+            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = adminId, status = "CREATED", since = OffsetDateTime.now(), until = null)
+        )
+
+        val userId = UUID.randomUUID()
         userJpaRepository.save(
             UserEntity(
-                id = UUID.randomUUID(),
+                id = userId,
                 name = "User",
                 email = "user@test.com",
                 password = passwordEncoder.encode("user123")!!,
                 role = "USER",
                 registeredAt = OffsetDateTime.now(),
-                status = "CREATED",
-                since = OffsetDateTime.now(),
             )
+        )
+        userStatusHistoryJpaRepository.save(
+            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = userId, status = "CREATED", since = OffsetDateTime.now(), until = null)
         )
 
         adminToken = loginAndGetToken("admin@test.com", "admin123")

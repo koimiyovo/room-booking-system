@@ -5,6 +5,7 @@ import com.kyovo.infrastructure.api.dto.LoginRequest
 import com.kyovo.infrastructure.api.dto.RegisterRequest
 import com.kyovo.infrastructure.api.dto.UpdateUserRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
+import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
 import com.kyovo.infrastructure.provider.MutableTimeProvider
@@ -58,16 +59,24 @@ class UserControllerIntegrationTest
         userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
+        val adminId = UUID.randomUUID()
         userJpaRepository.save(
             UserEntity(
-                id = UUID.randomUUID(),
+                id = adminId,
                 name = "Admin",
                 email = "admin@test.com",
                 password = passwordEncoder.encode("admin123")!!,
                 role = "ADMIN",
                 registeredAt = timeProvider.now(),
+            )
+        )
+        userStatusHistoryJpaRepository.save(
+            UserStatusHistoryEntity(
+                id = UUID.randomUUID(),
+                userId = adminId,
                 status = "CREATED",
                 since = timeProvider.now(),
+                until = null
             )
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
@@ -145,8 +154,15 @@ class UserControllerIntegrationTest
                 password = passwordEncoder.encode("password")!!,
                 role = "INVALID_ROLE",
                 registeredAt = timeProvider.now(),
+            )
+        )
+        userStatusHistoryJpaRepository.save(
+            UserStatusHistoryEntity(
+                id = UUID.randomUUID(),
+                userId = savedUser.id,
                 status = "CREATED",
                 since = timeProvider.now(),
+                until = null
             )
         )
 
@@ -168,8 +184,15 @@ class UserControllerIntegrationTest
                 password = passwordEncoder.encode("password")!!,
                 role = "USER",
                 registeredAt = timeProvider.now(),
+            )
+        )
+        userStatusHistoryJpaRepository.save(
+            UserStatusHistoryEntity(
+                id = UUID.randomUUID(),
+                userId = savedUser.id,
                 status = "INVALID_STATUS",
                 since = timeProvider.now(),
+                until = null
             )
         )
 
@@ -192,8 +215,8 @@ class UserControllerIntegrationTest
             jsonPath("$.name") { value("Alice Updated") }
         }
 
-        val updated = userJpaRepository.findByEmail("alice@test.com")
-        assertThat(updated?.name).isEqualTo("Alice Updated")
+        val updated = userJpaRepository.findById(UUID.fromString(aliceId)).orElseThrow()
+        assertThat(updated.name).isEqualTo("Alice Updated")
     }
 
     @Test
@@ -256,8 +279,8 @@ class UserControllerIntegrationTest
             jsonPath("$.status_info.since") { value("2026-03-01T12:00:00Z") }
         }
 
-        val entity = userJpaRepository.findById(UUID.fromString(aliceId)).orElseThrow()
-        assertThat(entity.status).isEqualTo("ACTIVE")
+        val currentStatus = userStatusHistoryJpaRepository.findByUserIdAndUntilIsNull(UUID.fromString(aliceId))
+        assertThat(currentStatus?.status).isEqualTo("ACTIVE")
     }
 
     @Test
@@ -351,8 +374,8 @@ class UserControllerIntegrationTest
             jsonPath("$.status_info.since") { value("2026-04-01T09:00:00Z") }
         }
 
-        val entity = userJpaRepository.findById(UUID.fromString(aliceId)).orElseThrow()
-        assertThat(entity.status).isEqualTo("INACTIVE")
+        val currentStatus = userStatusHistoryJpaRepository.findByUserIdAndUntilIsNull(UUID.fromString(aliceId))
+        assertThat(currentStatus?.status).isEqualTo("INACTIVE")
     }
 
     @Test
@@ -396,8 +419,8 @@ class UserControllerIntegrationTest
             jsonPath("$.status_info.since") { value("2026-05-01T08:00:00Z") }
         }
 
-        val entity = userJpaRepository.findById(UUID.fromString(aliceId)).orElseThrow()
-        assertThat(entity.status).isEqualTo("ACTIVE")
+        val currentStatus = userStatusHistoryJpaRepository.findByUserIdAndUntilIsNull(UUID.fromString(aliceId))
+        assertThat(currentStatus?.status).isEqualTo("ACTIVE")
     }
 
     @Test
