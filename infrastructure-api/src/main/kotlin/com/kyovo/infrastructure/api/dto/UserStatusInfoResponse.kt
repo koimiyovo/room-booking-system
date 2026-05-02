@@ -4,5 +4,6 @@ import java.time.OffsetDateTime
 
 data class UserStatusInfoResponse(
     val status: UserStatusResponse,
-    val since: OffsetDateTime
+    val since: OffsetDateTime,
+    val reason: String?
 )

@@ -11,6 +11,7 @@ import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.TransactionPort
 import com.kyovo.domain.port.secondary.UserRepository
 
+
 class UserService(
     private val userRepository: UserRepository,
     private val passwordHashPort: PasswordHashPort,
@@ -43,13 +44,13 @@ class UserService(
         return userRepository.save(updated)
     }
 
-    override fun delete(id: UserId)
+    override fun delete(id: UserId, reason: UserStatusReason?)
     {
-        if (userRepository.findById(id) == null) throw UserNotFoundException(id)
-        userRepository.deleteById(id)
+        val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
+        persistTransition(user, UserStatus.DELETED, reason)
     }
 
-    override fun validate(id: UserId, isAdmin: Boolean, validateBy: UserId): User
+    override fun validate(id: UserId, isAdmin: Boolean, validateBy: UserId, reason: UserStatusReason?): User
     {
         return transactionPort.executeInTransaction {
             val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
@@ -57,33 +58,33 @@ class UserService(
                 throw AccountNotOwnedByUserException()
             if (user.statusInfo.status != UserStatus.CREATED)
                 throw InvalidStatusTransitionException(user.statusInfo.status, UserStatus.ACTIVE)
-            persistTransition(user, UserStatus.ACTIVE)
+            persistTransition(user, UserStatus.ACTIVE, reason)
         }
     }
 
-    override fun deactivate(id: UserId): User
+    override fun deactivate(id: UserId, reason: UserStatusReason?): User
     {
         val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
-        return persistTransition(user, UserStatus.INACTIVE)
+        return persistTransition(user, UserStatus.INACTIVE, reason)
     }
 
-    override fun reactivate(id: UserId): User
+    override fun reactivate(id: UserId, reason: UserStatusReason?): User
     {
         val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
         if (user.statusInfo.status != UserStatus.INACTIVE)
             throw InvalidStatusTransitionException(user.statusInfo.status, UserStatus.ACTIVE)
-        return persistTransition(user, UserStatus.ACTIVE)
+        return persistTransition(user, UserStatus.ACTIVE, reason)
     }
 
-    private fun persistTransition(user: User, target: UserStatus): User
+    private fun persistTransition(user: User, target: UserStatus, reason: UserStatusReason?): User
     {
         val now = UserStatusInfoDate(clockPort.now())
         val updated =
-            user.transitionTo(target, now) ?: throw InvalidStatusTransitionException(user.statusInfo.status, target)
+            user.transitionTo(target, now, reason) ?: throw InvalidStatusTransitionException(user.statusInfo.status, target)
 
         return transactionPort.executeInTransaction {
             val saved = userRepository.update(updated)
-            userRepository.saveStatusHistory(saved.id, saved.statusInfo.status, saved.statusInfo.since)
+            userRepository.saveStatusHistory(saved.id, saved.statusInfo.status, saved.statusInfo.since, saved.statusInfo.reason)
             saved
         }
     }

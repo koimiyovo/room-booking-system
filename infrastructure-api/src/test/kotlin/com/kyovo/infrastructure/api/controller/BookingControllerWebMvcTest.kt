@@ -9,6 +9,7 @@ import com.kyovo.domain.model.room.RoomCapacity
 import com.kyovo.domain.model.room.RoomId
 import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.port.primary.BookingUseCase
+import com.kyovo.domain.port.primary.UserUseCase
 import com.kyovo.infrastructure.api.dto.CancelBookingRequest
 import com.kyovo.infrastructure.api.dto.CreateBookingRequest
 import com.kyovo.infrastructure.api.security.JwtService
@@ -40,6 +41,9 @@ class BookingControllerWebMvcTest
 
     @MockitoBean
     private lateinit var bookingUseCase: BookingUseCase
+
+    @MockitoBean
+    private lateinit var userUseCase: UserUseCase
 
     @MockitoBean
     private lateinit var jwtService: JwtService

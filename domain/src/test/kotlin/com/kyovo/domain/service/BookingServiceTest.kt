@@ -46,10 +46,10 @@ class BookingServiceTest
         UserPassword("hashed"),
         UserRole.USER,
         UserRegistrationDate(OffsetDateTime.now()),
-        UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+        UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
     )
     private val inactiveUser = activeUser.copy(
-        statusInfo = UserStatusInfo(status = UserStatus.INACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+        statusInfo = UserStatusInfo(status = UserStatus.INACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
     )
 
     private fun confirmedBooking(id: BookingId = BookingId(UUID.randomUUID())): Booking =
@@ -83,7 +83,7 @@ class BookingServiceTest
     fun `create succeeds when user account is in CREATED status`()
     {
         val createdUser = activeUser.copy(
-            statusInfo = UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()))
+            statusInfo = UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
         )
         whenever(userRepository.findById(userId)).thenReturn(createdUser)
         whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(room)

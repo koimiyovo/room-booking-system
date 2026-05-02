@@ -3,6 +3,7 @@ package com.kyovo.infrastructure.persistence.entity
 import com.kyovo.domain.model.user.UserStatus
 import com.kyovo.domain.model.user.UserStatusInfo
 import com.kyovo.domain.model.user.UserStatusInfoDate
+import com.kyovo.domain.model.user.UserStatusReason
 import com.kyovo.infrastructure.persistence.exception.InvalidUserStatusException
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -27,13 +28,16 @@ class UserStatusHistoryEntity(
     val since: OffsetDateTime,
 
     @Column(nullable = true)
-    val until: OffsetDateTime?
+    val until: OffsetDateTime?,
+
+    @Column(nullable = true)
+    val reason: String?
 )
 {
     fun toStatusInfo(): UserStatusInfo
     {
         val parsedStatus = UserStatus.entries.firstOrNull { it.label == status }
             ?: throw InvalidUserStatusException(status)
-        return UserStatusInfo(parsedStatus, UserStatusInfoDate(since))
+        return UserStatusInfo(parsedStatus, UserStatusInfoDate(since), reason?.let { UserStatusReason(it) })
     }
 }

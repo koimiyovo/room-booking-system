@@ -6,7 +6,8 @@ enum class UserStatusResponse
 {
     CREATED,
     ACTIVE,
-    INACTIVE;
+    INACTIVE,
+    DELETED;
 
     companion object
     {
@@ -17,6 +18,7 @@ enum class UserStatusResponse
                 UserStatus.CREATED -> CREATED
                 UserStatus.ACTIVE -> ACTIVE
                 UserStatus.INACTIVE -> INACTIVE
+                UserStatus.DELETED -> DELETED
             }
         }
     }

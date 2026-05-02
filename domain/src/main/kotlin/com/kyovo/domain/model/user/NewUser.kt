@@ -16,7 +16,7 @@ data class NewUser(
             password = password,
             role = role,
             registeredAt = registrationDate,
-            statusInfo = UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(registrationDate.value))
+            statusInfo = UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(registrationDate.value), reason = null)
         )
     }
 }

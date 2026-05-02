@@ -4,6 +4,7 @@ import com.kyovo.domain.exception.EmailAlreadyUsedException
 import com.kyovo.domain.exception.InvalidCredentialsException
 import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.primary.AuthUseCase
+import com.kyovo.domain.port.primary.UserUseCase
 import com.kyovo.infrastructure.api.dto.LoginRequest
 import com.kyovo.infrastructure.api.dto.RegisterRequest
 import com.kyovo.infrastructure.api.security.AuthToken
@@ -39,6 +40,9 @@ class AuthControllerWebMvcTest
     private lateinit var authUseCase: AuthUseCase
 
     @MockitoBean
+    private lateinit var userUseCase: UserUseCase
+
+    @MockitoBean
     private lateinit var jwtService: JwtService
 
     @MockitoBean
@@ -53,7 +57,7 @@ class AuthControllerWebMvcTest
             UserPassword("hashed"),
             UserRole.USER,
             UserRegistrationDate(OffsetDateTime.now()),
-            UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()))
+            UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
         )
 
     @Test

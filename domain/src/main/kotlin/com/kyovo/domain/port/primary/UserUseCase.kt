@@ -3,6 +3,7 @@ package com.kyovo.domain.port.primary
 import com.kyovo.domain.model.user.UpdateUser
 import com.kyovo.domain.model.user.User
 import com.kyovo.domain.model.user.UserId
+import com.kyovo.domain.model.user.UserStatusReason
 
 interface UserUseCase
 {
@@ -12,11 +13,11 @@ interface UserUseCase
 
     fun update(id: UserId, data: UpdateUser): User
 
-    fun delete(id: UserId)
+    fun delete(id: UserId, reason: UserStatusReason?)
 
-    fun validate(id: UserId, isAdmin: Boolean, validateBy: UserId): User
+    fun validate(id: UserId, isAdmin: Boolean, validateBy: UserId, reason: UserStatusReason?): User
 
-    fun deactivate(id: UserId): User
+    fun deactivate(id: UserId, reason: UserStatusReason?): User
 
-    fun reactivate(id: UserId): User
+    fun reactivate(id: UserId, reason: UserStatusReason?): User
 }

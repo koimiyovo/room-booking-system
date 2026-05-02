@@ -105,7 +105,7 @@ class AuthControllerIntegrationTest
             )
         )
         userStatusHistoryJpaRepository.save(
-            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = savedUser.id, status = "CREATED", since = OffsetDateTime.now(), until = null)
+            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = savedUser.id, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
 
         val result = mockMvc.post("/api/auth/login") {
@@ -134,7 +134,7 @@ class AuthControllerIntegrationTest
             )
         )
         userStatusHistoryJpaRepository.save(
-            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = savedUser.id, status = "CREATED", since = OffsetDateTime.now(), until = null)
+            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = savedUser.id, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
 
         mockMvc.post("/api/auth/login") {

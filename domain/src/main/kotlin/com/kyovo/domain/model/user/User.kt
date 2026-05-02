@@ -15,10 +15,10 @@ data class User(
         return statusInfo.isInactive()
     }
 
-    fun transitionTo(target: UserStatus, now: UserStatusInfoDate): User?
+    fun transitionTo(target: UserStatus, now: UserStatusInfoDate, reason: UserStatusReason?): User?
     {
         if (!statusInfo.status.canTransitionTo(target))
             return null
-        return copy(statusInfo = UserStatusInfo(target, now))
+        return copy(statusInfo = UserStatusInfo(target, now, reason))
     }
 }

@@ -68,7 +68,7 @@ class RoomControllerIntegrationTest
             )
         )
         userStatusHistoryJpaRepository.save(
-            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = adminId, status = "CREATED", since = OffsetDateTime.now(), until = null)
+            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = adminId, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
 
         val userId = UUID.randomUUID()
@@ -83,7 +83,7 @@ class RoomControllerIntegrationTest
             )
         )
         userStatusHistoryJpaRepository.save(
-            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = userId, status = "CREATED", since = OffsetDateTime.now(), until = null)
+            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = userId, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
 
         adminToken = loginAndGetToken("admin@test.com", "admin123")

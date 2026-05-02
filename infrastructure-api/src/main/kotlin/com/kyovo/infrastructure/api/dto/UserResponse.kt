@@ -25,7 +25,8 @@ data class UserResponse(
                 registeredAt = user.registeredAt.value,
                 statusInfo = UserStatusInfoResponse(
                     status = UserStatusResponse.from(user.statusInfo.status),
-                    since = user.statusInfo.since.value
+                    since = user.statusInfo.since.value,
+                    reason = user.statusInfo.reason?.value
                 )
             )
         }
