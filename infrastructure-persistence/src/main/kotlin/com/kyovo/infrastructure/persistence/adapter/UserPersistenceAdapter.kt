@@ -17,20 +17,37 @@ class UserPersistenceAdapter(
     private val transactionPort: TransactionPort
 ) : UserRepository
 {
-    override fun findAll(): List<User> = jpaRepository.findAll().map { it.toDomain() }
+    override fun findAll(): List<User>
+    {
+        return jpaRepository.findAllWithCurrentStatus().map { it.toUser() }
+    }
 
-    override fun findById(id: UserId): User? = jpaRepository.findById(id.value).orElse(null)?.toDomain()
+    override fun findById(id: UserId): User?
+    {
+        return jpaRepository.findByIdWithCurrentStatus(id.value).firstOrNull()?.toUser()
+    }
 
-    override fun findByEmail(email: UserEmail): User? = jpaRepository.findByEmail(email.value)?.toDomain()
+    override fun findByEmail(email: UserEmail): User?
+    {
+        return jpaRepository.findByEmailWithCurrentStatus(email.value).firstOrNull()?.toUser()
+    }
 
-    override fun save(user: User): User = jpaRepository.save(UserEntity.fromDomain(user)).toDomain()
+    override fun save(user: User): User
+    {
+        val entity = jpaRepository.save(UserEntity.fromDomain(user))
+        return entity.toDomain(user.statusInfo)
+    }
 
     override fun deleteById(id: UserId)
     {
         jpaRepository.deleteById(id.value)
     }
 
-    override fun update(user: User): User = jpaRepository.save(UserEntity.fromDomain(user)).toDomain()
+    override fun update(user: User): User
+    {
+        val entity = jpaRepository.save(UserEntity.fromDomain(user))
+        return entity.toDomain(user.statusInfo)
+    }
 
     override fun saveStatusHistory(userId: UserId, status: UserStatus, since: UserStatusInfoDate)
     {

@@ -1,5 +1,9 @@
 package com.kyovo.infrastructure.persistence.entity
 
+import com.kyovo.domain.model.user.UserStatus
+import com.kyovo.domain.model.user.UserStatusInfo
+import com.kyovo.domain.model.user.UserStatusInfoDate
+import com.kyovo.infrastructure.persistence.exception.InvalidUserStatusException
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
@@ -25,3 +29,11 @@ class UserStatusHistoryEntity(
     @Column(nullable = true)
     val until: OffsetDateTime?
 )
+{
+    fun toStatusInfo(): UserStatusInfo
+    {
+        val parsedStatus = UserStatus.entries.firstOrNull { it.label == status }
+            ?: throw InvalidUserStatusException(status)
+        return UserStatusInfo(parsedStatus, UserStatusInfoDate(since))
+    }
+}

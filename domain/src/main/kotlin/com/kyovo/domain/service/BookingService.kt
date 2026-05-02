@@ -7,11 +7,13 @@ import com.kyovo.domain.port.primary.BookingUseCase
 import com.kyovo.domain.port.secondary.BookingRepository
 import com.kyovo.domain.port.secondary.RoomRepository
 import com.kyovo.domain.port.secondary.TransactionPort
+import com.kyovo.domain.port.secondary.UserRepository
 
 class BookingService(
     private val bookingRepository: BookingRepository,
     private val roomRepository: RoomRepository,
-    private val transactionPort: TransactionPort
+    private val transactionPort: TransactionPort,
+    private val userRepository: UserRepository
 ) : BookingUseCase
 {
     override fun findAll(): List<Booking>
@@ -32,6 +34,9 @@ class BookingService(
     override fun create(newBooking: NewBooking): Booking
     {
         return transactionPort.executeInTransaction {
+            val user = userRepository.findById(newBooking.userId) ?: throw UserNotFoundException(newBooking.userId)
+            if (user.isInactive()) throw AccountInactiveException()
+
             val room = roomRepository.findByIdForBooking(newBooking.roomId)
                 ?: throw RoomNotFoundException(newBooking.roomId)
 

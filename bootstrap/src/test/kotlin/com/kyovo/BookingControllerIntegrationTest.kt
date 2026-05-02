@@ -3,9 +3,11 @@ package com.kyovo
 import com.kyovo.config.TestTimeProviderConfig
 import com.kyovo.infrastructure.api.dto.*
 import com.kyovo.infrastructure.persistence.entity.UserEntity
+import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
 import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
 import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
+import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -44,6 +46,9 @@ class BookingControllerIntegrationTest
     private lateinit var userJpaRepository: UserJpaRepository
 
     @Autowired
+    private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var aliceToken: String
@@ -56,19 +61,22 @@ class BookingControllerIntegrationTest
     {
         bookingJpaRepository.deleteAll()
         roomJpaRepository.deleteAll()
+        userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
+        val adminId = UUID.randomUUID()
         userJpaRepository.save(
             UserEntity(
-                id = UUID.randomUUID(),
+                id = adminId,
                 name = "Admin",
                 email = "admin@test.com",
                 password = passwordEncoder.encode("admin123")!!,
                 role = "ADMIN",
                 registeredAt = OffsetDateTime.now(),
-                status = "CREATED",
-                since = OffsetDateTime.now()
             )
+        )
+        userStatusHistoryJpaRepository.save(
+            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = adminId, status = "CREATED", since = OffsetDateTime.now(), until = null)
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
 
@@ -286,6 +294,28 @@ class BookingControllerIntegrationTest
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isNotFound() }
+        }
+    }
+
+    @Test
+    fun `POST api-bookings returns 403 when user account is inactive`()
+    {
+        mockMvc.post("/api/users/$aliceId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect { status { isOk() } }
+        mockMvc.post("/api/users/$aliceId/deactivate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect { status { isOk() } }
+
+        val roomId = createRoom()
+        val request = CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 3), 5, null)
+
+        mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isForbidden() }
         }
     }
 

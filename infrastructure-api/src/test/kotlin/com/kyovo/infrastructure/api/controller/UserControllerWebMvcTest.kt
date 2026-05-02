@@ -1,7 +1,7 @@
 package com.kyovo.infrastructure.api.controller
 
 import com.kyovo.domain.exception.AccountNotOwnedByUserException
-import com.kyovo.domain.exception.UserAlreadyActiveException
+import com.kyovo.domain.exception.InvalidStatusTransitionException
 import com.kyovo.domain.exception.UserNotFoundException
 import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.primary.UserUseCase
@@ -212,9 +212,10 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000", roles = ["USER"])
-    fun `POST api-users-id-validate returns 409 when account is already active`()
+    fun `POST api-users-id-validate returns 409 when status transition is invalid`()
     {
-        whenever(userUseCase.validate(any(), any(), any())).thenThrow(UserAlreadyActiveException(UserId(userId)))
+        whenever(userUseCase.validate(any(), any(), any()))
+            .thenThrow(InvalidStatusTransitionException(UserStatus.ACTIVE, UserStatus.ACTIVE))
 
         mockMvc.post("/api/users/$userId/validate") {
             with(csrf())
@@ -227,6 +228,136 @@ class UserControllerWebMvcTest
     fun `POST api-users-id-validate returns 401 when unauthenticated`()
     {
         mockMvc.post("/api/users/$userId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isUnauthorized() }
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `POST api-users-id-deactivate returns 200 when admin deactivates an active account`()
+    {
+        val inactiveUser = user.copy(
+            statusInfo = UserStatusInfo(status = UserStatus.INACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+        )
+        whenever(userUseCase.deactivate(UserId(userId))).thenReturn(inactiveUser)
+
+        mockMvc.post("/api/users/$userId/deactivate") {
+            with(csrf())
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status_info.status") { value("INACTIVE") }
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["USER"])
+    fun `POST api-users-id-deactivate returns 403 when called by a non-admin user`()
+    {
+        mockMvc.post("/api/users/$userId/deactivate") {
+            with(csrf())
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `POST api-users-id-deactivate returns 404 when user does not exist`()
+    {
+        whenever(userUseCase.deactivate(UserId(userId))).thenThrow(UserNotFoundException(UserId(userId)))
+
+        mockMvc.post("/api/users/$userId/deactivate") {
+            with(csrf())
+        }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `POST api-users-id-deactivate returns 409 when status transition is invalid`()
+    {
+        whenever(userUseCase.deactivate(UserId(userId)))
+            .thenThrow(InvalidStatusTransitionException(UserStatus.CREATED, UserStatus.INACTIVE))
+
+        mockMvc.post("/api/users/$userId/deactivate") {
+            with(csrf())
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-deactivate returns 401 when unauthenticated`()
+    {
+        mockMvc.post("/api/users/$userId/deactivate") {
+            with(csrf())
+        }.andExpect {
+            status { isUnauthorized() }
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `POST api-users-id-reactivate returns 200 when admin reactivates an inactive account`()
+    {
+        val activeUser = user.copy(
+            statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+        )
+        whenever(userUseCase.reactivate(UserId(userId))).thenReturn(activeUser)
+
+        mockMvc.post("/api/users/$userId/reactivate") {
+            with(csrf())
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status_info.status") { value("ACTIVE") }
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["USER"])
+    fun `POST api-users-id-reactivate returns 403 when called by a non-admin user`()
+    {
+        mockMvc.post("/api/users/$userId/reactivate") {
+            with(csrf())
+        }.andExpect {
+            status { isForbidden() }
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `POST api-users-id-reactivate returns 404 when user does not exist`()
+    {
+        whenever(userUseCase.reactivate(UserId(userId))).thenThrow(UserNotFoundException(UserId(userId)))
+
+        mockMvc.post("/api/users/$userId/reactivate") {
+            with(csrf())
+        }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
+    @WithMockUser(roles = ["ADMIN"])
+    fun `POST api-users-id-reactivate returns 409 when status transition is invalid`()
+    {
+        whenever(userUseCase.reactivate(UserId(userId)))
+            .thenThrow(InvalidStatusTransitionException(UserStatus.ACTIVE, UserStatus.ACTIVE))
+
+        mockMvc.post("/api/users/$userId/reactivate") {
+            with(csrf())
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    @Test
+    fun `POST api-users-id-reactivate returns 401 when unauthenticated`()
+    {
+        mockMvc.post("/api/users/$userId/reactivate") {
             with(csrf())
         }.andExpect {
             status { isUnauthorized() }

@@ -15,4 +15,8 @@ interface UserUseCase
     fun delete(id: UserId)
 
     fun validate(id: UserId, isAdmin: Boolean, validateBy: UserId): User
+
+    fun deactivate(id: UserId): User
+
+    fun reactivate(id: UserId): User
 }
