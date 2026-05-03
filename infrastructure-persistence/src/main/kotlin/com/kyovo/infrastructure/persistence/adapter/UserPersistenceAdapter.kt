@@ -3,6 +3,7 @@ package com.kyovo.infrastructure.persistence.adapter
 import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.secondary.TransactionPort
 import com.kyovo.domain.port.secondary.UserRepository
+
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
@@ -38,28 +39,25 @@ class UserPersistenceAdapter(
         return entity.toDomain(user.statusInfo)
     }
 
-    override fun deleteById(id: UserId)
-    {
-        jpaRepository.deleteById(id.value)
-    }
-
     override fun update(user: User): User
     {
         val entity = jpaRepository.save(UserEntity.fromDomain(user))
         return entity.toDomain(user.statusInfo)
     }
 
-    override fun saveStatusHistory(userId: UserId, status: UserStatus, since: UserStatusInfoDate)
+    override fun saveStatusHistory(userId: UserId, status: UserStatus, since: UserStatusInfoDate, reason: UserStatusReason?)
     {
         transactionPort.executeInTransaction {
             statusHistoryJpaRepository.closeCurrentEntry(userId.value, since.value)
+            val userRef = jpaRepository.getReferenceById(userId.value)
             statusHistoryJpaRepository.save(
                 UserStatusHistoryEntity(
                     id = UUID.randomUUID(),
-                    userId = userId.value,
+                    user = userRef,
                     status = status.label,
                     since = since.value,
-                    until = null
+                    until = null,
+                    reason = reason?.value
                 )
             )
         }

@@ -27,7 +27,7 @@ class UserEntity(
     @Column(nullable = false)
     val role: String,
 
-    @Column(nullable = false)
+    @Column(name = "registration_date", nullable = false)
     val registeredAt: OffsetDateTime
 )
 {

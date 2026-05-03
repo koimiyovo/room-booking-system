@@ -2,6 +2,7 @@ package com.kyovo.infrastructure.api.controller
 
 import com.kyovo.domain.model.room.*
 import com.kyovo.domain.port.primary.RoomUseCase
+import com.kyovo.domain.port.primary.UserUseCase
 import com.kyovo.infrastructure.api.dto.CreateRoomRequest
 import com.kyovo.infrastructure.api.security.JwtService
 import org.junit.jupiter.api.Test
@@ -32,6 +33,9 @@ class RoomControllerWebMvcTest
 
     @MockitoBean
     private lateinit var roomUseCase: RoomUseCase
+
+    @MockitoBean
+    private lateinit var userUseCase: UserUseCase
 
     @MockitoBean
     private lateinit var jwtService: JwtService

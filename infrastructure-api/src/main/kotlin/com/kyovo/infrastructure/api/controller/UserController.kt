@@ -2,9 +2,11 @@ package com.kyovo.infrastructure.api.controller
 
 import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.model.user.UserRole.ADMIN
+import com.kyovo.domain.model.user.UserStatusReason
 import com.kyovo.domain.port.primary.UserUseCase
 import com.kyovo.infrastructure.api.dto.UpdateUserRequest
 import com.kyovo.infrastructure.api.dto.UserResponse
+import com.kyovo.infrastructure.api.dto.UserStatusReasonRequest
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -82,12 +84,13 @@ class UserController(private val userUseCase: UserUseCase)
     )
     fun delete(
         @PathVariable id: UUID,
+        @RequestBody(required = false) request: UserStatusReasonRequest?,
         authentication: Authentication
     ): ResponseEntity<Void>
     {
         val targetId = UserId(id)
         if (!isAdminOrOwner(authentication, targetId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
-        userUseCase.delete(targetId)
+        userUseCase.delete(targetId, request?.reason?.let { UserStatusReason(it) })
         return ResponseEntity.noContent().build()
     }
 
@@ -103,13 +106,14 @@ class UserController(private val userUseCase: UserUseCase)
     fun validate(
         @Parameter(description = "UUID identifier of the user")
         @PathVariable id: UUID,
+        @RequestBody(required = false) request: UserStatusReasonRequest?,
         authentication: Authentication
     ): ResponseEntity<UserResponse>
     {
         val targetId = UserId(id)
         val isAdmin = authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }
         val validateBy = UserId(UUID.fromString(authentication.name))
-        val user = userUseCase.validate(targetId, isAdmin, validateBy)
+        val user = userUseCase.validate(targetId, isAdmin, validateBy, request?.reason?.let { UserStatusReason(it) })
         return ResponseEntity.ok(UserResponse.fromDomain(user))
     }
 
@@ -125,11 +129,12 @@ class UserController(private val userUseCase: UserUseCase)
     fun deactivate(
         @Parameter(description = "UUID identifier of the user")
         @PathVariable id: UUID,
+        @RequestBody(required = false) request: UserStatusReasonRequest?,
         authentication: Authentication
     ): ResponseEntity<UserResponse>
     {
         if (!isAdmin(authentication)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
-        val user = userUseCase.deactivate(UserId(id))
+        val user = userUseCase.deactivate(UserId(id), request?.reason?.let { UserStatusReason(it) })
         return ResponseEntity.ok(UserResponse.fromDomain(user))
     }
 
@@ -145,11 +150,12 @@ class UserController(private val userUseCase: UserUseCase)
     fun reactivate(
         @Parameter(description = "UUID identifier of the user")
         @PathVariable id: UUID,
+        @RequestBody(required = false) request: UserStatusReasonRequest?,
         authentication: Authentication
     ): ResponseEntity<UserResponse>
     {
         if (!isAdmin(authentication)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
-        val user = userUseCase.reactivate(UserId(id))
+        val user = userUseCase.reactivate(UserId(id), request?.reason?.let { UserStatusReason(it) })
         return ResponseEntity.ok(UserResponse.fromDomain(user))
     }
 

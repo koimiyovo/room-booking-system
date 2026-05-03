@@ -1,17 +1,6 @@
 package com.kyovo.infrastructure.api.controller
 
-import com.kyovo.domain.exception.AccountNotOwnedByUserException
-import com.kyovo.domain.exception.BookingAlreadyCancelledException
-import com.kyovo.domain.exception.BookingConflictException
-import com.kyovo.domain.exception.BookingNotFoundException
-import com.kyovo.domain.exception.BookingNotOwnedByUserException
-import com.kyovo.domain.exception.AccountInactiveException
-import com.kyovo.domain.exception.EmailAlreadyUsedException
-import com.kyovo.domain.exception.InvalidCredentialsException
-import com.kyovo.domain.exception.InvalidStatusTransitionException
-import com.kyovo.domain.exception.RoomCapacityExceededException
-import com.kyovo.domain.exception.RoomNotFoundException
-import com.kyovo.domain.exception.UserNotFoundException
+import com.kyovo.domain.exception.*
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler

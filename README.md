@@ -6,8 +6,10 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 
 - Room management (create, list, get by id)
 - User management with role-based access control (USER / ADMIN)
+- User lifecycle: status transitions CREATED → ACTIVE → INACTIVE → DELETED (soft delete)
 - Booking management with conflict detection and cancellation
 - JWT authentication with token blacklisting on logout
+- Deleted users' JWTs are immediately rejected with 401
 - Pessimistic locking to prevent double-bookings under concurrent requests
 - OpenAPI documentation via Swagger UI
 
@@ -16,7 +18,7 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 - **Kotlin** 2.3 / **Java** 19
 - **Spring Boot** 4.0
 - **Spring Security** 7 — stateless JWT
-- **Spring Data JPA** / **H2** (in-memory)
+- **Spring Data JPA** / **H2** (in-memory) — with referential integrity enforced via FK constraints
 - **jjwt** 0.13 — JWT generation and validation
 - **ArchUnit** 1.4 — architecture rules enforced as tests
 - **Maven** multi-module build
@@ -97,10 +99,13 @@ Interactive documentation is available at `http://localhost:8080/swagger-ui/inde
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/api/users` | ADMIN | List all users |
-| GET | `/api/users/{id}` | ADMIN | Get a user by id |
+| GET | `/api/users` | ADMIN | List all users (including deleted) |
+| GET | `/api/users/{id}` | ADMIN | Get a user by id (404 if deleted) |
 | PUT | `/api/users/{id}` | Authenticated | Update own account |
-| DELETE | `/api/users/{id}` | Authenticated | Delete own account |
+| DELETE | `/api/users/{id}` | Authenticated | Soft-delete own account |
+| POST | `/api/users/{id}/validate` | Authenticated | Transition CREATED → ACTIVE |
+| POST | `/api/users/{id}/deactivate` | ADMIN | Transition ACTIVE → INACTIVE |
+| POST | `/api/users/{id}/reactivate` | ADMIN | Transition INACTIVE → ACTIVE |
 
 ## Running tests
 

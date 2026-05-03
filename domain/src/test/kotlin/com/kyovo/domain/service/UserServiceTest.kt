@@ -13,11 +13,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import org.mockito.kotlin.*
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -37,13 +33,13 @@ class UserServiceTest
         UserPassword("hashed"),
         UserRole.USER,
         UserRegistrationDate(OffsetDateTime.now()),
-        UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()))
+        UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
     )
     private val activeUser = existingUser.copy(
-        statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+        statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
     )
     private val inactiveUser = existingUser.copy(
-        statusInfo = UserStatusInfo(status = UserStatus.INACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+        statusInfo = UserStatusInfo(status = UserStatus.INACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
     )
 
     @BeforeEach
@@ -131,13 +127,31 @@ class UserServiceTest
     }
 
     @Test
-    fun `delete removes the user when it exists`()
+    fun `delete transitions the user to DELETED when it exists`()
     {
+        val deletedUser = existingUser.copy(
+            statusInfo = UserStatusInfo(status = UserStatus.DELETED, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
+        )
         whenever(userRepository.findById(userId)).thenReturn(existingUser)
+        whenever(userRepository.update(any())).thenReturn(deletedUser)
 
-        userService.delete(userId)
+        userService.delete(userId, null)
 
-        verify(userRepository).deleteById(userId)
+        verify(userRepository).update(any())
+    }
+
+    @Test
+    fun `delete records status history after transition to DELETED`()
+    {
+        val deletedUser = existingUser.copy(
+            statusInfo = UserStatusInfo(status = UserStatus.DELETED, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
+        )
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
+        whenever(userRepository.update(any())).thenReturn(deletedUser)
+
+        userService.delete(userId, null)
+
+        verify(userRepository).saveStatusHistory(deletedUser.id, UserStatus.DELETED, deletedUser.statusInfo.since, null)
     }
 
     @Test
@@ -145,7 +159,7 @@ class UserServiceTest
     {
         whenever(userRepository.findById(userId)).thenReturn(null)
 
-        assertThatThrownBy { userService.delete(userId) }
+        assertThatThrownBy { userService.delete(userId, null) }
             .isInstanceOf(UserNotFoundException::class.java)
     }
 
@@ -155,7 +169,7 @@ class UserServiceTest
         whenever(userRepository.findById(userId)).thenReturn(existingUser)
         whenever(userRepository.update(any())).thenReturn(activeUser)
 
-        val result = userService.validate(userId, isAdmin = false, validateBy = userId)
+        val result = userService.validate(userId, isAdmin = false, validateBy = userId, reason = null)
 
         assertThat(result.statusInfo.status).isEqualTo(UserStatus.ACTIVE)
     }
@@ -166,9 +180,9 @@ class UserServiceTest
         whenever(userRepository.findById(userId)).thenReturn(existingUser)
         whenever(userRepository.update(any())).thenReturn(activeUser)
 
-        userService.validate(userId, isAdmin = false, validateBy = userId)
+        userService.validate(userId, isAdmin = false, validateBy = userId, reason = null)
 
-        verify(userRepository).saveStatusHistory(activeUser.id, UserStatus.ACTIVE, activeUser.statusInfo.since)
+        verify(userRepository).saveStatusHistory(activeUser.id, UserStatus.ACTIVE, activeUser.statusInfo.since, null)
     }
 
     @Test
@@ -176,7 +190,7 @@ class UserServiceTest
     {
         whenever(userRepository.findById(userId)).thenReturn(null)
 
-        assertThatThrownBy { userService.validate(userId, isAdmin = false, validateBy = userId) }
+        assertThatThrownBy { userService.validate(userId, isAdmin = false, validateBy = userId, reason = null) }
             .isInstanceOf(UserNotFoundException::class.java)
     }
 
@@ -186,7 +200,7 @@ class UserServiceTest
         val otherId = UserId(UUID.randomUUID())
         whenever(userRepository.findById(userId)).thenReturn(existingUser)
 
-        assertThatThrownBy { userService.validate(userId, isAdmin = false, validateBy = otherId) }
+        assertThatThrownBy { userService.validate(userId, isAdmin = false, validateBy = otherId, reason = null) }
             .isInstanceOf(AccountNotOwnedByUserException::class.java)
     }
 
@@ -195,7 +209,7 @@ class UserServiceTest
     {
         whenever(userRepository.findById(userId)).thenReturn(activeUser)
 
-        assertThatThrownBy { userService.validate(userId, isAdmin = false, validateBy = userId) }
+        assertThatThrownBy { userService.validate(userId, isAdmin = false, validateBy = userId, reason = null) }
             .isInstanceOf(InvalidStatusTransitionException::class.java)
     }
 
@@ -205,7 +219,7 @@ class UserServiceTest
         whenever(userRepository.findById(userId)).thenReturn(activeUser)
         whenever(userRepository.update(any())).thenReturn(inactiveUser)
 
-        val result = userService.deactivate(userId)
+        val result = userService.deactivate(userId, null)
 
         assertThat(result.statusInfo.status).isEqualTo(UserStatus.INACTIVE)
     }
@@ -216,9 +230,9 @@ class UserServiceTest
         whenever(userRepository.findById(userId)).thenReturn(activeUser)
         whenever(userRepository.update(any())).thenReturn(inactiveUser)
 
-        userService.deactivate(userId)
+        userService.deactivate(userId, null)
 
-        verify(userRepository).saveStatusHistory(inactiveUser.id, UserStatus.INACTIVE, inactiveUser.statusInfo.since)
+        verify(userRepository).saveStatusHistory(inactiveUser.id, UserStatus.INACTIVE, inactiveUser.statusInfo.since, null)
     }
 
     @Test
@@ -226,7 +240,7 @@ class UserServiceTest
     {
         whenever(userRepository.findById(userId)).thenReturn(null)
 
-        assertThatThrownBy { userService.deactivate(userId) }
+        assertThatThrownBy { userService.deactivate(userId, null) }
             .isInstanceOf(UserNotFoundException::class.java)
     }
 
@@ -235,7 +249,7 @@ class UserServiceTest
     {
         whenever(userRepository.findById(userId)).thenReturn(existingUser)
 
-        assertThatThrownBy { userService.deactivate(userId) }
+        assertThatThrownBy { userService.deactivate(userId, null) }
             .isInstanceOf(InvalidStatusTransitionException::class.java)
     }
 
@@ -245,7 +259,7 @@ class UserServiceTest
         whenever(userRepository.findById(userId)).thenReturn(inactiveUser)
         whenever(userRepository.update(any())).thenReturn(activeUser)
 
-        val result = userService.reactivate(userId)
+        val result = userService.reactivate(userId, null)
 
         assertThat(result.statusInfo.status).isEqualTo(UserStatus.ACTIVE)
     }
@@ -256,9 +270,9 @@ class UserServiceTest
         whenever(userRepository.findById(userId)).thenReturn(inactiveUser)
         whenever(userRepository.update(any())).thenReturn(activeUser)
 
-        userService.reactivate(userId)
+        userService.reactivate(userId, null)
 
-        verify(userRepository).saveStatusHistory(activeUser.id, UserStatus.ACTIVE, activeUser.statusInfo.since)
+        verify(userRepository).saveStatusHistory(activeUser.id, UserStatus.ACTIVE, activeUser.statusInfo.since, null)
     }
 
     @Test
@@ -266,7 +280,7 @@ class UserServiceTest
     {
         whenever(userRepository.findById(userId)).thenReturn(null)
 
-        assertThatThrownBy { userService.reactivate(userId) }
+        assertThatThrownBy { userService.reactivate(userId, null) }
             .isInstanceOf(UserNotFoundException::class.java)
     }
 
@@ -275,7 +289,7 @@ class UserServiceTest
     {
         whenever(userRepository.findById(userId)).thenReturn(activeUser)
 
-        assertThatThrownBy { userService.reactivate(userId) }
+        assertThatThrownBy { userService.reactivate(userId, null) }
             .isInstanceOf(InvalidStatusTransitionException::class.java)
     }
 }

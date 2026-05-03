@@ -4,14 +4,16 @@ enum class UserStatus(val label: String)
 {
     CREATED("CREATED"),
     ACTIVE("ACTIVE"),
-    INACTIVE("INACTIVE");
+    INACTIVE("INACTIVE"),
+    DELETED("DELETED");
 
     val allowedTransitions: Set<UserStatus> by lazy {
         when (this)
         {
-            CREATED -> setOf(ACTIVE)
-            ACTIVE -> setOf(INACTIVE)
-            INACTIVE -> setOf(ACTIVE)
+            CREATED -> setOf(ACTIVE, DELETED)
+            ACTIVE -> setOf(INACTIVE, DELETED)
+            INACTIVE -> setOf(ACTIVE, DELETED)
+            DELETED -> emptySet()
         }
     }
 

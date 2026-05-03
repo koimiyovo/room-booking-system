@@ -10,6 +10,8 @@ import com.kyovo.infrastructure.api.dto.UpdateUserRequest
 import com.kyovo.infrastructure.api.security.JwtService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
@@ -17,11 +19,7 @@ import org.springframework.http.MediaType
 import org.springframework.security.test.context.support.WithMockUser
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.delete
-import org.springframework.test.web.servlet.get
-import org.springframework.test.web.servlet.post
-import org.springframework.test.web.servlet.put
+import org.springframework.test.web.servlet.*
 import tools.jackson.databind.ObjectMapper
 import java.time.OffsetDateTime
 import java.util.*
@@ -53,7 +51,7 @@ class UserControllerWebMvcTest
             UserPassword("hashed"),
             UserRole.USER,
             UserRegistrationDate(OffsetDateTime.now()),
-            UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()))
+            UserStatusInfo(status = UserStatus.CREATED, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
         )
 
     @Test
@@ -159,7 +157,7 @@ class UserControllerWebMvcTest
     @WithMockUser(roles = ["ADMIN"])
     fun `DELETE api-users-id returns 404 when user does not exist`()
     {
-        whenever(userUseCase.delete(UserId(userId))).thenThrow(UserNotFoundException(UserId(userId)))
+        whenever(userUseCase.delete(eq(UserId(userId)), anyOrNull())).thenThrow(UserNotFoundException(UserId(userId)))
 
         mockMvc.delete("/api/users/$userId") {
             with(csrf())
@@ -184,9 +182,9 @@ class UserControllerWebMvcTest
     fun `POST api-users-id-validate returns 200 when user validates own account`()
     {
         val activeUser = user.copy(
-            statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+            statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
         )
-        whenever(userUseCase.validate(any(), any(), any())).thenReturn(activeUser)
+        whenever(userUseCase.validate(any(), any(), any(), anyOrNull())).thenReturn(activeUser)
 
         mockMvc.post("/api/users/$userId/validate") {
             with(csrf())
@@ -201,7 +199,7 @@ class UserControllerWebMvcTest
     @WithMockUser(username = "99999999-9999-9999-9999-999999999999", roles = ["USER"])
     fun `POST api-users-id-validate returns 403 when non-admin user validates another account`()
     {
-        whenever(userUseCase.validate(any(), any(), any())).thenThrow(AccountNotOwnedByUserException())
+        whenever(userUseCase.validate(any(), any(), any(), anyOrNull())).thenThrow(AccountNotOwnedByUserException())
 
         mockMvc.post("/api/users/$userId/validate") {
             with(csrf())
@@ -214,7 +212,7 @@ class UserControllerWebMvcTest
     @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000", roles = ["USER"])
     fun `POST api-users-id-validate returns 409 when status transition is invalid`()
     {
-        whenever(userUseCase.validate(any(), any(), any()))
+        whenever(userUseCase.validate(any(), any(), any(), anyOrNull()))
             .thenThrow(InvalidStatusTransitionException(UserStatus.ACTIVE, UserStatus.ACTIVE))
 
         mockMvc.post("/api/users/$userId/validate") {
@@ -239,9 +237,9 @@ class UserControllerWebMvcTest
     fun `POST api-users-id-deactivate returns 200 when admin deactivates an active account`()
     {
         val inactiveUser = user.copy(
-            statusInfo = UserStatusInfo(status = UserStatus.INACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+            statusInfo = UserStatusInfo(status = UserStatus.INACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
         )
-        whenever(userUseCase.deactivate(UserId(userId))).thenReturn(inactiveUser)
+        whenever(userUseCase.deactivate(eq(UserId(userId)), anyOrNull())).thenReturn(inactiveUser)
 
         mockMvc.post("/api/users/$userId/deactivate") {
             with(csrf())
@@ -266,7 +264,7 @@ class UserControllerWebMvcTest
     @WithMockUser(roles = ["ADMIN"])
     fun `POST api-users-id-deactivate returns 404 when user does not exist`()
     {
-        whenever(userUseCase.deactivate(UserId(userId))).thenThrow(UserNotFoundException(UserId(userId)))
+        whenever(userUseCase.deactivate(eq(UserId(userId)), anyOrNull())).thenThrow(UserNotFoundException(UserId(userId)))
 
         mockMvc.post("/api/users/$userId/deactivate") {
             with(csrf())
@@ -279,7 +277,7 @@ class UserControllerWebMvcTest
     @WithMockUser(roles = ["ADMIN"])
     fun `POST api-users-id-deactivate returns 409 when status transition is invalid`()
     {
-        whenever(userUseCase.deactivate(UserId(userId)))
+        whenever(userUseCase.deactivate(eq(UserId(userId)), anyOrNull()))
             .thenThrow(InvalidStatusTransitionException(UserStatus.CREATED, UserStatus.INACTIVE))
 
         mockMvc.post("/api/users/$userId/deactivate") {
@@ -304,9 +302,9 @@ class UserControllerWebMvcTest
     fun `POST api-users-id-reactivate returns 200 when admin reactivates an inactive account`()
     {
         val activeUser = user.copy(
-            statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()))
+            statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
         )
-        whenever(userUseCase.reactivate(UserId(userId))).thenReturn(activeUser)
+        whenever(userUseCase.reactivate(eq(UserId(userId)), anyOrNull())).thenReturn(activeUser)
 
         mockMvc.post("/api/users/$userId/reactivate") {
             with(csrf())
@@ -331,7 +329,7 @@ class UserControllerWebMvcTest
     @WithMockUser(roles = ["ADMIN"])
     fun `POST api-users-id-reactivate returns 404 when user does not exist`()
     {
-        whenever(userUseCase.reactivate(UserId(userId))).thenThrow(UserNotFoundException(UserId(userId)))
+        whenever(userUseCase.reactivate(eq(UserId(userId)), anyOrNull())).thenThrow(UserNotFoundException(UserId(userId)))
 
         mockMvc.post("/api/users/$userId/reactivate") {
             with(csrf())
@@ -344,7 +342,7 @@ class UserControllerWebMvcTest
     @WithMockUser(roles = ["ADMIN"])
     fun `POST api-users-id-reactivate returns 409 when status transition is invalid`()
     {
-        whenever(userUseCase.reactivate(UserId(userId)))
+        whenever(userUseCase.reactivate(eq(UserId(userId)), anyOrNull()))
             .thenThrow(InvalidStatusTransitionException(UserStatus.ACTIVE, UserStatus.ACTIVE))
 
         mockMvc.post("/api/users/$userId/reactivate") {

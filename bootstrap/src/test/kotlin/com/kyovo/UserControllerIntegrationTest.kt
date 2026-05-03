@@ -6,6 +6,7 @@ import com.kyovo.infrastructure.api.dto.RegisterRequest
 import com.kyovo.infrastructure.api.dto.UpdateUserRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
+import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
 import com.kyovo.infrastructure.provider.MutableTimeProvider
@@ -43,6 +44,9 @@ class UserControllerIntegrationTest
     private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
 
     @Autowired
+    private lateinit var bookingJpaRepository: BookingJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var aliceToken: String
@@ -56,13 +60,13 @@ class UserControllerIntegrationTest
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 2, 1, 10, 0), ZoneOffset.UTC))
 
+        bookingJpaRepository.deleteAll()
         userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
-        val adminId = UUID.randomUUID()
-        userJpaRepository.save(
+        val savedAdmin = userJpaRepository.save(
             UserEntity(
-                id = adminId,
+                id = UUID.randomUUID(),
                 name = "Admin",
                 email = "admin@test.com",
                 password = passwordEncoder.encode("admin123")!!,
@@ -73,10 +77,11 @@ class UserControllerIntegrationTest
         userStatusHistoryJpaRepository.save(
             UserStatusHistoryEntity(
                 id = UUID.randomUUID(),
-                userId = adminId,
+                user = savedAdmin,
                 status = "CREATED",
                 since = timeProvider.now(),
-                until = null
+                until = null,
+                reason = null
             )
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
@@ -159,10 +164,11 @@ class UserControllerIntegrationTest
         userStatusHistoryJpaRepository.save(
             UserStatusHistoryEntity(
                 id = UUID.randomUUID(),
-                userId = savedUser.id,
+                user = savedUser,
                 status = "CREATED",
                 since = timeProvider.now(),
-                until = null
+                until = null,
+                reason = null
             )
         )
 
@@ -189,10 +195,11 @@ class UserControllerIntegrationTest
         userStatusHistoryJpaRepository.save(
             UserStatusHistoryEntity(
                 id = UUID.randomUUID(),
-                userId = savedUser.id,
+                user = savedUser,
                 status = "INVALID_STATUS",
                 since = timeProvider.now(),
-                until = null
+                until = null,
+                reason = null
             )
         )
 
@@ -246,7 +253,63 @@ class UserControllerIntegrationTest
             status { isNoContent() }
         }
 
-        assertThat(userJpaRepository.findById(UUID.fromString(aliceId))).isEmpty
+        val currentStatus = userStatusHistoryJpaRepository.findByUserIdAndUntilIsNull(UUID.fromString(aliceId))
+        assertThat(currentStatus?.status).isEqualTo("DELETED")
+    }
+
+    @Test
+    fun `DELETE api-users-id does not physically remove the user row`()
+    {
+        mockMvc.delete("/api/users/$aliceId") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isNoContent() }
+        }
+
+        assertThat(userJpaRepository.findById(UUID.fromString(aliceId))).isPresent
+    }
+
+    @Test
+    fun `GET api-users includes deleted users`()
+    {
+        mockMvc.delete("/api/users/$aliceId") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect { status { isNoContent() } }
+
+        mockMvc.get("/api/users") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.id == '$aliceId')].status_info.status") { value("DELETED") }
+        }
+    }
+
+    @Test
+    fun `GET api-users-id returns 404 for a deleted user`()
+    {
+        mockMvc.delete("/api/users/$aliceId") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect { status { isNoContent() } }
+
+        mockMvc.get("/api/users/$aliceId") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
+    fun `deleted user JWT is rejected with 401`()
+    {
+        mockMvc.delete("/api/users/$aliceId") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect { status { isNoContent() } }
+
+        mockMvc.get("/api/users/$aliceId") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isUnauthorized() }
+        }
     }
 
     @Test

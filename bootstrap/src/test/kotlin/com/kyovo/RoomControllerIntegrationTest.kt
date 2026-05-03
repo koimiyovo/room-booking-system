@@ -5,6 +5,7 @@ import com.kyovo.infrastructure.api.dto.CreateRoomRequest
 import com.kyovo.infrastructure.api.dto.LoginRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
+import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
 import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
@@ -45,6 +46,9 @@ class RoomControllerIntegrationTest
     private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
 
     @Autowired
+    private lateinit var bookingJpaRepository: BookingJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var userToken: String
@@ -52,14 +56,14 @@ class RoomControllerIntegrationTest
     @BeforeEach
     fun setUp()
     {
+        bookingJpaRepository.deleteAll()
         roomJpaRepository.deleteAll()
         userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
-        val adminId = UUID.randomUUID()
-        userJpaRepository.save(
+        val savedAdmin = userJpaRepository.save(
             UserEntity(
-                id = adminId,
+                id = UUID.randomUUID(),
                 name = "Admin",
                 email = "admin@test.com",
                 password = passwordEncoder.encode("admin123")!!,
@@ -68,13 +72,12 @@ class RoomControllerIntegrationTest
             )
         )
         userStatusHistoryJpaRepository.save(
-            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = adminId, status = "CREATED", since = OffsetDateTime.now(), until = null)
+            UserStatusHistoryEntity(id = UUID.randomUUID(), user = savedAdmin, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
 
-        val userId = UUID.randomUUID()
-        userJpaRepository.save(
+        val savedUser = userJpaRepository.save(
             UserEntity(
-                id = userId,
+                id = UUID.randomUUID(),
                 name = "User",
                 email = "user@test.com",
                 password = passwordEncoder.encode("user123")!!,
@@ -83,7 +86,7 @@ class RoomControllerIntegrationTest
             )
         )
         userStatusHistoryJpaRepository.save(
-            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = userId, status = "CREATED", since = OffsetDateTime.now(), until = null)
+            UserStatusHistoryEntity(id = UUID.randomUUID(), user = savedUser, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
 
         adminToken = loginAndGetToken("admin@test.com", "admin123")
