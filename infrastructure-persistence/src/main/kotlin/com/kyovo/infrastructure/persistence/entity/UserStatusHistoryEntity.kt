@@ -5,10 +5,7 @@ import com.kyovo.domain.model.user.UserStatusInfo
 import com.kyovo.domain.model.user.UserStatusInfoDate
 import com.kyovo.domain.model.user.UserStatusReason
 import com.kyovo.infrastructure.persistence.exception.InvalidUserStatusException
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.Id
-import jakarta.persistence.Table
+import jakarta.persistence.*
 import java.time.OffsetDateTime
 import java.util.*
 
@@ -18,8 +15,9 @@ class UserStatusHistoryEntity(
     @Id
     val id: UUID,
 
-    @Column(nullable = false)
-    val userId: UUID,
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = ForeignKey(name = "fk_user_status_history_user_id"))
+    val user: UserEntity,
 
     @Column(nullable = false)
     val status: String,

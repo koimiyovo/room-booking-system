@@ -3,10 +3,7 @@ package com.kyovo.infrastructure.persistence.entity
 import com.kyovo.domain.model.booking.*
 import com.kyovo.domain.model.room.RoomId
 import com.kyovo.domain.model.user.UserId
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.Id
-import jakarta.persistence.Table
+import jakarta.persistence.*
 import java.time.LocalDate
 import java.util.*
 
@@ -16,65 +13,73 @@ class BookingEntity(
     @Id
     val id: UUID,
 
-    @Column(nullable = false)
-    val roomId: UUID,
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "room_id", nullable = false, foreignKey = ForeignKey(name = "fk_booking_room_id"))
+    val room: RoomEntity,
 
-    @Column(nullable = false)
-    val userId: UUID,
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = ForeignKey(name = "fk_booking_user_id"))
+    val user: UserEntity,
 
-    @Column(nullable = false)
+    @Column(name = "start_date", nullable = false)
     val startDate: LocalDate,
 
-    @Column(nullable = false)
+    @Column(name = "end_date", nullable = false)
     val endDate: LocalDate,
 
-    @Column(nullable = false)
+    @Column(name = "number_of_people", nullable = false)
     val numberOfPeople: Int,
 
-    @Column(nullable = true)
+    @Column(name = "special_requests", nullable = true)
     val specialRequests: String?,
 
     @Column(nullable = false)
     val status: String,
 
-    @Column(nullable = true)
-    val cancellationReason: String?,
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "cancelled_by", nullable = true, foreignKey = ForeignKey(name = "fk_booking_cancelled_by"))
+    val cancelledByUser: UserEntity?,
 
-    @Column(nullable = true)
-    val cancelledBy: UUID?
+    @Column(name = "cancellation_reason", nullable = true)
+    val cancellationReason: String?
 )
 {
     companion object
     {
-        fun fromDomain(booking: Booking): BookingEntity
+        fun fromDomain(
+            booking: Booking,
+            room: RoomEntity,
+            user: UserEntity,
+            cancelledByUser: UserEntity?
+        ): BookingEntity
         {
             return BookingEntity(
                 id = booking.id.value,
-                roomId = booking.roomId.value,
-                userId = booking.userId.value,
+                room = room,
+                user = user,
                 startDate = booking.startDate.value,
                 endDate = booking.endDate.value,
                 numberOfPeople = booking.numberOfPeople.value,
                 specialRequests = booking.specialRequests?.value,
                 status = booking.status.label,
                 cancellationReason = booking.cancellation?.reason?.value,
-                cancelledBy = booking.cancellation?.cancelledBy?.value
+                cancelledByUser = cancelledByUser
             )
         }
     }
 
     fun toDomain(): Booking
     {
-        val cancellation = cancelledBy?.let {
+        val cancellation = cancelledByUser?.let {
             Cancellation(
-                cancelledBy = UserId(it),
+                cancelledBy = UserId(it.id),
                 reason = cancellationReason?.let { r -> BookingCancellationReason(r) }
             )
         }
         return Booking(
             id = BookingId(id),
-            roomId = RoomId(roomId),
-            userId = UserId(userId),
+            roomId = RoomId(room.id),
+            userId = UserId(user.id),
             startDate = BookingStartDate(startDate),
             endDate = BookingEndDate(endDate),
             numberOfPeople = BookingNumberOfPeople(numberOfPeople),

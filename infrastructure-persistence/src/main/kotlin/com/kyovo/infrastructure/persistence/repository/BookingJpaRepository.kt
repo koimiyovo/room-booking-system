@@ -9,13 +9,14 @@ import java.util.*
 
 interface BookingJpaRepository : JpaRepository<BookingEntity, UUID>
 {
-    fun findByUserId(userId: UUID): List<BookingEntity>
+    @Query("SELECT b FROM BookingEntity b WHERE b.user.id = :userId")
+    fun findByUserId(@Param("userId") userId: UUID): List<BookingEntity>
 
     @Query(
         """
         SELECT CASE WHEN COUNT(b) > 0 THEN true ELSE false END
         FROM BookingEntity b
-        WHERE b.roomId = :roomId
+        WHERE b.room.id = :roomId
           AND b.startDate < :endDate
           AND b.endDate > :startDate
           AND b.status = 'CONFIRMED'

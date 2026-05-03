@@ -6,6 +6,7 @@ import com.kyovo.infrastructure.api.dto.RegisterRequest
 import com.kyovo.infrastructure.api.dto.UpdateUserRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
+import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
 import com.kyovo.infrastructure.provider.MutableTimeProvider
@@ -43,6 +44,9 @@ class UserControllerIntegrationTest
     private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
 
     @Autowired
+    private lateinit var bookingJpaRepository: BookingJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var aliceToken: String
@@ -56,13 +60,13 @@ class UserControllerIntegrationTest
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 2, 1, 10, 0), ZoneOffset.UTC))
 
+        bookingJpaRepository.deleteAll()
         userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
-        val adminId = UUID.randomUUID()
-        userJpaRepository.save(
+        val savedAdmin = userJpaRepository.save(
             UserEntity(
-                id = adminId,
+                id = UUID.randomUUID(),
                 name = "Admin",
                 email = "admin@test.com",
                 password = passwordEncoder.encode("admin123")!!,
@@ -73,7 +77,7 @@ class UserControllerIntegrationTest
         userStatusHistoryJpaRepository.save(
             UserStatusHistoryEntity(
                 id = UUID.randomUUID(),
-                userId = adminId,
+                user = savedAdmin,
                 status = "CREATED",
                 since = timeProvider.now(),
                 until = null,
@@ -160,7 +164,7 @@ class UserControllerIntegrationTest
         userStatusHistoryJpaRepository.save(
             UserStatusHistoryEntity(
                 id = UUID.randomUUID(),
-                userId = savedUser.id,
+                user = savedUser,
                 status = "CREATED",
                 since = timeProvider.now(),
                 until = null,
@@ -191,7 +195,7 @@ class UserControllerIntegrationTest
         userStatusHistoryJpaRepository.save(
             UserStatusHistoryEntity(
                 id = UUID.randomUUID(),
-                userId = savedUser.id,
+                user = savedUser,
                 status = "INVALID_STATUS",
                 since = timeProvider.now(),
                 until = null,

@@ -64,10 +64,9 @@ class BookingControllerIntegrationTest
         userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
 
-        val adminId = UUID.randomUUID()
-        userJpaRepository.save(
+        val savedAdmin = userJpaRepository.save(
             UserEntity(
-                id = adminId,
+                id = UUID.randomUUID(),
                 name = "Admin",
                 email = "admin@test.com",
                 password = passwordEncoder.encode("admin123")!!,
@@ -76,7 +75,7 @@ class BookingControllerIntegrationTest
             )
         )
         userStatusHistoryJpaRepository.save(
-            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = adminId, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
+            UserStatusHistoryEntity(id = UUID.randomUUID(), user = savedAdmin, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
 

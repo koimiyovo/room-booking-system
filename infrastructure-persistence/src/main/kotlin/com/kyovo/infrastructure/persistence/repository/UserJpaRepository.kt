@@ -8,7 +8,7 @@ import java.util.*
 
 private const val SELECT_USER_ROW =
     "SELECT new com.kyovo.infrastructure.persistence.repository.UserRow(u, h)" +
-            " FROM UserEntity u JOIN UserStatusHistoryEntity h ON h.userId = u.id WHERE h.until IS NULL"
+            " FROM UserEntity u JOIN UserStatusHistoryEntity h ON h.user.id = u.id WHERE h.until IS NULL"
 
 private const val SELECT_NON_DELETED_USER_ROW = "$SELECT_USER_ROW AND h.status <> 'DELETED'"
 

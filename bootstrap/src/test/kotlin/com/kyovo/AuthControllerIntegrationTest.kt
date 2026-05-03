@@ -5,6 +5,7 @@ import com.kyovo.infrastructure.api.dto.LoginRequest
 import com.kyovo.infrastructure.api.dto.RegisterRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
+import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
 import com.kyovo.infrastructure.provider.MutableTimeProvider
@@ -43,6 +44,9 @@ class AuthControllerIntegrationTest
     private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
 
     @Autowired
+    private lateinit var bookingJpaRepository: BookingJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
 
     @Autowired
@@ -52,6 +56,7 @@ class AuthControllerIntegrationTest
     fun setUp()
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 1, 1, 0, 0), ZoneOffset.UTC))
+        bookingJpaRepository.deleteAll()
         userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()
     }
@@ -105,7 +110,7 @@ class AuthControllerIntegrationTest
             )
         )
         userStatusHistoryJpaRepository.save(
-            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = savedUser.id, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
+            UserStatusHistoryEntity(id = UUID.randomUUID(), user = savedUser, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
 
         val result = mockMvc.post("/api/auth/login") {
@@ -134,7 +139,7 @@ class AuthControllerIntegrationTest
             )
         )
         userStatusHistoryJpaRepository.save(
-            UserStatusHistoryEntity(id = UUID.randomUUID(), userId = savedUser.id, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
+            UserStatusHistoryEntity(id = UUID.randomUUID(), user = savedUser, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
 
         mockMvc.post("/api/auth/login") {

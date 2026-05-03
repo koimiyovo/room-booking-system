@@ -49,10 +49,11 @@ class UserPersistenceAdapter(
     {
         transactionPort.executeInTransaction {
             statusHistoryJpaRepository.closeCurrentEntry(userId.value, since.value)
+            val userRef = jpaRepository.getReferenceById(userId.value)
             statusHistoryJpaRepository.save(
                 UserStatusHistoryEntity(
                     id = UUID.randomUUID(),
-                    userId = userId.value,
+                    user = userRef,
                     status = status.label,
                     since = since.value,
                     until = null,
