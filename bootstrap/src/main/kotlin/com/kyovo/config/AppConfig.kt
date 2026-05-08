@@ -50,9 +50,10 @@ class AppConfig
         bookingRepository: BookingRepository,
         roomRepository: RoomRepository,
         transactionPort: TransactionPort,
-        userRepository: UserRepository
+        userRepository: UserRepository,
+        clockPort: ClockPort
     ): BookingService
     {
-        return BookingService(bookingRepository, roomRepository, transactionPort, userRepository)
+        return BookingService(bookingRepository, roomRepository, transactionPort, userRepository, clockPort)
     }
 }

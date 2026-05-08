@@ -6,6 +6,7 @@ import com.kyovo.infrastructure.api.dto.RegisterRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
 import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
+import com.kyovo.infrastructure.persistence.repository.BookingStatusHistoryJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
 import com.kyovo.infrastructure.provider.MutableTimeProvider
@@ -47,6 +48,9 @@ class AuthControllerIntegrationTest
     private lateinit var bookingJpaRepository: BookingJpaRepository
 
     @Autowired
+    private lateinit var bookingStatusHistoryJpaRepository: BookingStatusHistoryJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
 
     @Autowired
@@ -56,6 +60,7 @@ class AuthControllerIntegrationTest
     fun setUp()
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 1, 1, 0, 0), ZoneOffset.UTC))
+        bookingStatusHistoryJpaRepository.deleteAll()
         bookingJpaRepository.deleteAll()
         userStatusHistoryJpaRepository.deleteAll()
         userJpaRepository.deleteAll()

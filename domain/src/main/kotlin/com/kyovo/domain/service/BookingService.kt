@@ -4,16 +4,14 @@ import com.kyovo.domain.exception.*
 import com.kyovo.domain.model.booking.*
 import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.port.primary.BookingUseCase
-import com.kyovo.domain.port.secondary.BookingRepository
-import com.kyovo.domain.port.secondary.RoomRepository
-import com.kyovo.domain.port.secondary.TransactionPort
-import com.kyovo.domain.port.secondary.UserRepository
+import com.kyovo.domain.port.secondary.*
 
 class BookingService(
     private val bookingRepository: BookingRepository,
     private val roomRepository: RoomRepository,
     private val transactionPort: TransactionPort,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val clockPort: ClockPort
 ) : BookingUseCase
 {
     override fun findAll(): List<Booking>
@@ -46,7 +44,18 @@ class BookingService(
             if (bookingRepository.existsOverlappingBooking(newBooking.roomId, newBooking.startDate, newBooking.endDate))
                 throw BookingConflictException(newBooking.roomId, newBooking.startDate, newBooking.endDate)
 
-            bookingRepository.save(newBooking.toBooking())
+            val now = clockPort.now()
+            val statusInfo =
+                BookingStatusInfo(BookingStatus.CONFIRMED, BookingStatusInfoDate(now), changedBy = null, reason = null)
+            val booking = bookingRepository.save(newBooking.toBooking(statusInfo))
+            bookingRepository.saveStatusHistory(
+                booking.id,
+                BookingStatus.CONFIRMED,
+                BookingStatusHistoryDate(now),
+                newBooking.userId,
+                null
+            )
+            booking
         }
     }
 
@@ -54,15 +63,31 @@ class BookingService(
         bookingId: BookingId,
         cancelledBy: UserId,
         isAdmin: Boolean,
-        reason: BookingCancellationReason?
+        reason: BookingStatusReason?
     ): Booking
     {
         return transactionPort.executeInTransaction {
             val booking = bookingRepository.findById(bookingId) ?: throw BookingNotFoundException(bookingId)
             if (!isAdmin && booking.userId != cancelledBy)
                 throw BookingNotOwnedByUserException(bookingId, cancelledBy)
-            if (booking.cancellation != null) throw BookingAlreadyCancelledException(bookingId)
-            bookingRepository.update(booking.copy(cancellation = Cancellation(cancelledBy, reason)))
+            val now = clockPort.now()
+            val updated = booking.transitionTo(BookingStatus.CANCELED, BookingStatusInfoDate(now), cancelledBy, reason)
+                ?: throw BookingAlreadyCancelledException(bookingId)
+            val saved = bookingRepository.update(updated)
+            bookingRepository.saveStatusHistory(
+                saved.id,
+                BookingStatus.CANCELED,
+                BookingStatusHistoryDate(now),
+                cancelledBy,
+                reason
+            )
+            saved
         }
+    }
+
+    override fun findStatusHistory(bookingId: BookingId): List<BookingStatusHistory>
+    {
+        bookingRepository.findById(bookingId) ?: throw BookingNotFoundException(bookingId)
+        return bookingRepository.findStatusHistory(bookingId)
     }
 }

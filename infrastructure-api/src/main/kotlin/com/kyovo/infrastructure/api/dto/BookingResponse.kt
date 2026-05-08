@@ -13,7 +13,7 @@ data class BookingResponse(
     val numberOfPeople: Int,
     val specialRequests: String?,
     val status: String,
-    val cancellation: CancellationResponse?
+    val statusInfo: BookingStatusInfoResponse
 )
 {
     companion object
@@ -28,10 +28,8 @@ data class BookingResponse(
                 endDate = booking.endDate.value,
                 numberOfPeople = booking.numberOfPeople.value,
                 specialRequests = booking.specialRequests?.value,
-                status = booking.status.label,
-                cancellation = booking.cancellation?.let {
-                    CancellationResponse(cancelledBy = it.cancelledBy.value, reason = it.reason?.value)
-                }
+                status = booking.statusInfo.status.label,
+                statusInfo = BookingStatusInfoResponse.fromDomain(booking.statusInfo)
             )
         }
     }

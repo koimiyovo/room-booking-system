@@ -6,6 +6,7 @@ import com.kyovo.infrastructure.api.dto.LoginRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
 import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
+import com.kyovo.infrastructure.persistence.repository.BookingStatusHistoryJpaRepository
 import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
@@ -49,6 +50,9 @@ class RoomControllerIntegrationTest
     private lateinit var bookingJpaRepository: BookingJpaRepository
 
     @Autowired
+    private lateinit var bookingStatusHistoryJpaRepository: BookingStatusHistoryJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var userToken: String
@@ -56,6 +60,7 @@ class RoomControllerIntegrationTest
     @BeforeEach
     fun setUp()
     {
+        bookingStatusHistoryJpaRepository.deleteAll()
         bookingJpaRepository.deleteAll()
         roomJpaRepository.deleteAll()
         userStatusHistoryJpaRepository.deleteAll()

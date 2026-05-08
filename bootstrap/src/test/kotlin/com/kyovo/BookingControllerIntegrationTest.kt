@@ -5,6 +5,7 @@ import com.kyovo.infrastructure.api.dto.*
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
 import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
+import com.kyovo.infrastructure.persistence.repository.BookingStatusHistoryJpaRepository
 import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
@@ -49,6 +50,9 @@ class BookingControllerIntegrationTest
     private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
 
     @Autowired
+    private lateinit var bookingStatusHistoryJpaRepository: BookingStatusHistoryJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var aliceToken: String
@@ -59,6 +63,7 @@ class BookingControllerIntegrationTest
     @BeforeEach
     fun setUp()
     {
+        bookingStatusHistoryJpaRepository.deleteAll()
         bookingJpaRepository.deleteAll()
         roomJpaRepository.deleteAll()
         userStatusHistoryJpaRepository.deleteAll()
@@ -230,7 +235,8 @@ class BookingControllerIntegrationTest
         }.andExpect {
             status { isOk() }
             jsonPath("$.status") { value("CANCELLED") }
-            jsonPath("$.cancellation.reason") { value("No longer needed") }
+            jsonPath("$.status_info.reason") { value("No longer needed") }
+            jsonPath("$.status_info.since") { exists() }
         }
 
         val overlapping =
@@ -315,6 +321,61 @@ class BookingControllerIntegrationTest
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isForbidden() }
+        }
+    }
+
+    @Test
+    fun `GET api-bookings-id-history returns CONFIRMED entry after creation`()
+    {
+        val roomId = createRoom()
+        val postResult = mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 3), 5, null)
+            )
+            header("Authorization", "Bearer $aliceToken")
+        }.andReturn()
+        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
+
+        mockMvc.get("/api/bookings/$bookingId/history") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.length()") { value(1) }
+            jsonPath("$[0].status") { value("CONFIRMED") }
+            jsonPath("$[0].changed_at") { exists() }
+            jsonPath("$[0].changed_by") { value(aliceId.toString()) }
+        }
+    }
+
+    @Test
+    fun `GET api-bookings-id-history returns CONFIRMED then CANCELLED after cancellation`()
+    {
+        val roomId = createRoom()
+        val postResult = mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 3), 5, null)
+            )
+            header("Authorization", "Bearer $aliceToken")
+        }.andReturn()
+        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
+
+        mockMvc.post("/api/bookings/$bookingId/cancel") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(CancelBookingRequest("No longer needed"))
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect { status { isOk() } }
+
+        mockMvc.get("/api/bookings/$bookingId/history") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.length()") { value(2) }
+            jsonPath("$[0].status") { value("CONFIRMED") }
+            jsonPath("$[1].status") { value("CANCELLED") }
+            jsonPath("$[1].reason") { value("No longer needed") }
+            jsonPath("$[1].changed_by") { value(aliceId.toString()) }
         }
     }
 
