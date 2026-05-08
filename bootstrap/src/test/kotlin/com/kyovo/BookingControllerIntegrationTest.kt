@@ -5,6 +5,7 @@ import com.kyovo.infrastructure.api.dto.*
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
 import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
+import com.kyovo.infrastructure.persistence.repository.BookingStatusHistoryJpaRepository
 import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
@@ -49,6 +50,9 @@ class BookingControllerIntegrationTest
     private lateinit var userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository
 
     @Autowired
+    private lateinit var bookingStatusHistoryJpaRepository: BookingStatusHistoryJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var aliceToken: String
@@ -59,6 +63,7 @@ class BookingControllerIntegrationTest
     @BeforeEach
     fun setUp()
     {
+        bookingStatusHistoryJpaRepository.deleteAll()
         bookingJpaRepository.deleteAll()
         roomJpaRepository.deleteAll()
         userStatusHistoryJpaRepository.deleteAll()
@@ -103,11 +108,11 @@ class BookingControllerIntegrationTest
         return objectMapper.readTree(result.response.contentAsString)["token"].asString()
     }
 
-    private fun createRoom(name: String = "Conference Room", capacity: Int = 10): UUID
+    private fun createRoom(name: String = "Conference Room", capacity: Int = 10, requiresValidation: Boolean = false): UUID
     {
         val result = mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(CreateRoomRequest(name, capacity))
+            content = objectMapper.writeValueAsString(CreateRoomRequest(name, capacity, requiresValidation))
             header("Authorization", "Bearer $adminToken")
         }.andReturn()
         return UUID.fromString(objectMapper.readTree(result.response.contentAsString)["id"].asString())
@@ -230,7 +235,8 @@ class BookingControllerIntegrationTest
         }.andExpect {
             status { isOk() }
             jsonPath("$.status") { value("CANCELLED") }
-            jsonPath("$.cancellation.reason") { value("No longer needed") }
+            jsonPath("$.status_info.reason") { value("No longer needed") }
+            jsonPath("$.status_info.since") { exists() }
         }
 
         val overlapping =
@@ -319,6 +325,61 @@ class BookingControllerIntegrationTest
     }
 
     @Test
+    fun `GET api-bookings-id-history returns CONFIRMED entry after creation`()
+    {
+        val roomId = createRoom()
+        val postResult = mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 3), 5, null)
+            )
+            header("Authorization", "Bearer $aliceToken")
+        }.andReturn()
+        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
+
+        mockMvc.get("/api/bookings/$bookingId/history") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.length()") { value(1) }
+            jsonPath("$[0].status") { value("CONFIRMED") }
+            jsonPath("$[0].changed_at") { exists() }
+            jsonPath("$[0].changed_by") { value(aliceId.toString()) }
+        }
+    }
+
+    @Test
+    fun `GET api-bookings-id-history returns CONFIRMED then CANCELLED after cancellation`()
+    {
+        val roomId = createRoom()
+        val postResult = mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 3), 5, null)
+            )
+            header("Authorization", "Bearer $aliceToken")
+        }.andReturn()
+        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
+
+        mockMvc.post("/api/bookings/$bookingId/cancel") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(CancelBookingRequest("No longer needed"))
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect { status { isOk() } }
+
+        mockMvc.get("/api/bookings/$bookingId/history") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.length()") { value(2) }
+            jsonPath("$[0].status") { value("CONFIRMED") }
+            jsonPath("$[1].status") { value("CANCELLED") }
+            jsonPath("$[1].reason") { value("No longer needed") }
+            jsonPath("$[1].changed_by") { value(aliceId.toString()) }
+        }
+    }
+
+    @Test
     fun `GET api-bookings-my returns only the authenticated user bookings`()
     {
         val roomId = createRoom()
@@ -343,6 +404,98 @@ class BookingControllerIntegrationTest
         }.andExpect {
             status { isOk() }
             jsonPath("$.length()") { value(0) }
+        }
+    }
+
+    @Test
+    fun `POST api-bookings returns PENDING when room requires validation`()
+    {
+        val roomId = createRoom(requiresValidation = true)
+        val request = CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 3), 5, null)
+
+        mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(request)
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isCreated() }
+            jsonPath("$.status") { value("PENDING") }
+        }
+    }
+
+    @Test
+    fun `POST api-bookings-id-validate returns 200 and CONFIRMED booking`()
+    {
+        val roomId = createRoom(requiresValidation = true)
+        val postResult = mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateBookingRequest(roomId, aliceId, LocalDate.of(2027, 1, 1), LocalDate.of(2027, 1, 3), 5, null)
+            )
+            header("Authorization", "Bearer $aliceToken")
+        }.andReturn()
+        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
+
+        mockMvc.post("/api/bookings/$bookingId/validate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status") { value("CONFIRMED") }
+            jsonPath("$.status_info.changed_by") { exists() }
+        }
+    }
+
+    @Test
+    fun `POST api-bookings-id-validate cancels overlapping PENDING bookings`()
+    {
+        val roomId = createRoom(requiresValidation = true)
+        val aliceResult = mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateBookingRequest(roomId, aliceId, LocalDate.of(2027, 2, 1), LocalDate.of(2027, 2, 5), 5, null)
+            )
+            header("Authorization", "Bearer $aliceToken")
+        }.andReturn()
+        val aliceBookingId = objectMapper.readTree(aliceResult.response.contentAsString)["id"].asString()
+
+        val bobResult = mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateBookingRequest(roomId, bobId, LocalDate.of(2027, 2, 3), LocalDate.of(2027, 2, 7), 5, null)
+            )
+            header("Authorization", "Bearer $bobToken")
+        }.andReturn()
+        val bobBookingId = objectMapper.readTree(bobResult.response.contentAsString)["id"].asString()
+
+        mockMvc.post("/api/bookings/$aliceBookingId/validate") {
+            header("Authorization", "Bearer $adminToken")
+        }.andExpect { status { isOk() } }
+
+        mockMvc.get("/api/bookings/$bobBookingId") {
+            header("Authorization", "Bearer $bobToken")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status") { value("CANCELLED") }
+        }
+    }
+
+    @Test
+    fun `POST api-bookings-id-validate returns 403 for non-admin`()
+    {
+        val roomId = createRoom(requiresValidation = true)
+        val postResult = mockMvc.post("/api/bookings") {
+            contentType = MediaType.APPLICATION_JSON
+            content = objectMapper.writeValueAsString(
+                CreateBookingRequest(roomId, aliceId, LocalDate.of(2027, 3, 1), LocalDate.of(2027, 3, 3), 5, null)
+            )
+            header("Authorization", "Bearer $aliceToken")
+        }.andReturn()
+        val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
+
+        mockMvc.post("/api/bookings/$bookingId/validate") {
+            header("Authorization", "Bearer $aliceToken")
+        }.andExpect {
+            status { isForbidden() }
         }
     }
 }

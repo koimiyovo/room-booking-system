@@ -27,4 +27,21 @@ interface BookingJpaRepository : JpaRepository<BookingEntity, UUID>
         @Param("startDate") startDate: LocalDate,
         @Param("endDate") endDate: LocalDate
     ): Boolean
+
+    @Query(
+        """
+        SELECT b FROM BookingEntity b
+        WHERE b.room.id = :roomId
+          AND b.status = 'PENDING'
+          AND b.startDate < :endDate
+          AND b.endDate > :startDate
+          AND b.id <> :excludeId
+    """
+    )
+    fun findOverlappingPending(
+        @Param("roomId") roomId: UUID,
+        @Param("startDate") startDate: LocalDate,
+        @Param("endDate") endDate: LocalDate,
+        @Param("excludeId") excludeId: UUID
+    ): List<BookingEntity>
 }

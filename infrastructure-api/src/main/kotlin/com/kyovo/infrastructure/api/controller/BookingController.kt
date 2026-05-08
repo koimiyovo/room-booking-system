@@ -1,14 +1,11 @@
 package com.kyovo.infrastructure.api.controller
 
-import com.kyovo.domain.model.booking.BookingCancellationReason
 import com.kyovo.domain.model.booking.BookingId
+import com.kyovo.domain.model.booking.BookingStatusReason
 import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.model.user.UserRole.ADMIN
 import com.kyovo.domain.port.primary.BookingUseCase
-import com.kyovo.infrastructure.api.dto.BookingResponse
-import com.kyovo.infrastructure.api.dto.CancelBookingRequest
-import com.kyovo.infrastructure.api.dto.CreateBookingRequest
-import com.kyovo.infrastructure.api.dto.CreateBookingResponse
+import com.kyovo.infrastructure.api.dto.*
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -89,9 +86,55 @@ class BookingController(private val bookingUseCase: BookingUseCase)
             startDate = booking.startDate.value,
             endDate = booking.endDate.value,
             numberOfPeople = booking.numberOfPeople.value,
-            specialRequests = booking.specialRequests?.value
+            specialRequests = booking.specialRequests?.value,
+            status = booking.status.label
         )
         return ResponseEntity(response, HttpStatus.CREATED)
+    }
+
+    @GetMapping("/{id}/history")
+    @Operation(summary = "Get status history of a booking")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Status history returned successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Access denied"),
+        ApiResponse(responseCode = "404", description = "Booking not found")
+    )
+    fun getStatusHistory(
+        @Parameter(description = "UUID identifier of the booking")
+        @PathVariable id: UUID,
+        authentication: Authentication
+    ): ResponseEntity<List<BookingStatusHistoryResponse>>
+    {
+        val bookingId = BookingId(id)
+        val booking = bookingUseCase.findById(bookingId) ?: return ResponseEntity.notFound().build()
+        val isAdmin = authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }
+        val requestingUserId = UserId(UUID.fromString(authentication.name))
+        if (!isAdmin && booking.userId != requestingUserId) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        val history = bookingUseCase.findStatusHistory(bookingId).map { BookingStatusHistoryResponse.fromDomain(it) }
+        return ResponseEntity.ok(history)
+    }
+
+    @PostMapping("/{id}/validate")
+    @Operation(summary = "Validate a pending booking (admin only)")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Booking validated successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Admin role required"),
+        ApiResponse(responseCode = "404", description = "Booking not found"),
+        ApiResponse(responseCode = "409", description = "Booking is not in PENDING status")
+    )
+    fun validate(
+        @Parameter(description = "UUID identifier of the booking")
+        @PathVariable id: UUID,
+        authentication: Authentication
+    ): ResponseEntity<BookingResponse>
+    {
+        val isAdmin = authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }
+        if (!isAdmin) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        val adminId = UserId(UUID.fromString(authentication.name))
+        val booking = bookingUseCase.validate(BookingId(id), adminId)
+        return ResponseEntity.ok(BookingResponse.fromDomain(booking))
     }
 
     @PostMapping("/{id}/cancel")
@@ -112,7 +155,7 @@ class BookingController(private val bookingUseCase: BookingUseCase)
         val bookingId = BookingId(id)
         val isAdmin = authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }
         val cancelledByUserId = UserId(UUID.fromString(authentication.name))
-        val reason = request?.reason?.let { BookingCancellationReason(it) }
+        val reason = request?.reason?.let { BookingStatusReason(it) }
         val booking = bookingUseCase.cancel(bookingId, cancelledByUserId, isAdmin, reason)
         return ResponseEntity.ok(BookingResponse.fromDomain(booking))
     }

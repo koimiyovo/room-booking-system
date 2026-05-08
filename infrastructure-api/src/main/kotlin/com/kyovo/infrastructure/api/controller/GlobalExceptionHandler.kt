@@ -81,6 +81,12 @@ class GlobalExceptionHandler
         return ResponseEntity(ex.message, HttpStatus.FORBIDDEN)
     }
 
+    @ExceptionHandler(BookingNotPendingException::class)
+    fun handleBookingNotPending(ex: BookingNotPendingException): ResponseEntity<String>
+    {
+        return ResponseEntity(ex.message, HttpStatus.CONFLICT)
+    }
+
     @ExceptionHandler(RuntimeException::class)
     fun handleUnexpected(ex: RuntimeException): ResponseEntity<String>
     {

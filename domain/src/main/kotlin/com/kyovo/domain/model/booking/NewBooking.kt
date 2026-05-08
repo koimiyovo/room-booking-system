@@ -12,8 +12,8 @@ data class NewBooking(
     val specialRequests: BookingSpecialRequests?
 )
 {
-    fun toBooking(): Booking
+    fun toBooking(statusInfo: BookingStatusInfo): Booking
     {
-        return Booking(BookingId.generate(), roomId, userId, startDate, endDate, numberOfPeople, specialRequests, null)
+        return Booking(BookingId.generate(), roomId, userId, startDate, endDate, numberOfPeople, specialRequests, statusInfo)
     }
 }

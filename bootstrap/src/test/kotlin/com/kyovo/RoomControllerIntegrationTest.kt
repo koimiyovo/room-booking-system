@@ -6,6 +6,7 @@ import com.kyovo.infrastructure.api.dto.LoginRequest
 import com.kyovo.infrastructure.persistence.entity.UserEntity
 import com.kyovo.infrastructure.persistence.entity.UserStatusHistoryEntity
 import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
+import com.kyovo.infrastructure.persistence.repository.BookingStatusHistoryJpaRepository
 import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
@@ -49,6 +50,9 @@ class RoomControllerIntegrationTest
     private lateinit var bookingJpaRepository: BookingJpaRepository
 
     @Autowired
+    private lateinit var bookingStatusHistoryJpaRepository: BookingStatusHistoryJpaRepository
+
+    @Autowired
     private lateinit var passwordEncoder: PasswordEncoder
     private lateinit var adminToken: String
     private lateinit var userToken: String
@@ -56,6 +60,7 @@ class RoomControllerIntegrationTest
     @BeforeEach
     fun setUp()
     {
+        bookingStatusHistoryJpaRepository.deleteAll()
         bookingJpaRepository.deleteAll()
         roomJpaRepository.deleteAll()
         userStatusHistoryJpaRepository.deleteAll()
@@ -118,13 +123,15 @@ class RoomControllerIntegrationTest
     {
         mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Conférence", 25))
+            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Conférence", 25, false))
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isCreated() }
             jsonPath("$.id") { isNotEmpty() }
             jsonPath("$.name") { value("Salle Conférence") }
             jsonPath("$.capacity") { value(25) }
+            jsonPath("$.requires_validation") { value(false) }
+            jsonPath("$.created_by") { isNotEmpty() }
         }
     }
 
@@ -133,7 +140,7 @@ class RoomControllerIntegrationTest
     {
         mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle", 10))
+            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle", 10, false))
             header("Authorization", "Bearer $userToken")
         }.andExpect {
             status { isForbidden() }
@@ -145,7 +152,7 @@ class RoomControllerIntegrationTest
     {
         val postResult = mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Réunion", 12))
+            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Réunion", 12, false))
             header("Authorization", "Bearer $adminToken")
         }.andReturn()
 
@@ -167,7 +174,7 @@ class RoomControllerIntegrationTest
     {
         val postResult = mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Formation", 30))
+            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Formation", 30, false))
             header("Authorization", "Bearer $adminToken")
         }.andReturn()
 

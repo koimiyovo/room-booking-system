@@ -10,5 +10,6 @@ data class CreateBookingResponse(
     val startDate: LocalDate,
     val endDate: LocalDate,
     val numberOfPeople: Int,
-    val specialRequests: String?
+    val specialRequests: String?,
+    val status: String
 )

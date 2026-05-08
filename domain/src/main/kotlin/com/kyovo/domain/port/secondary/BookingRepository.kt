@@ -1,9 +1,6 @@
 package com.kyovo.domain.port.secondary
 
-import com.kyovo.domain.model.booking.Booking
-import com.kyovo.domain.model.booking.BookingEndDate
-import com.kyovo.domain.model.booking.BookingId
-import com.kyovo.domain.model.booking.BookingStartDate
+import com.kyovo.domain.model.booking.*
 import com.kyovo.domain.model.room.RoomId
 import com.kyovo.domain.model.user.UserId
 
@@ -20,4 +17,21 @@ interface BookingRepository
     fun update(booking: Booking): Booking
 
     fun existsOverlappingBooking(roomId: RoomId, startDate: BookingStartDate, endDate: BookingEndDate): Boolean
+
+    fun saveStatusHistory(
+        bookingId: BookingId,
+        status: BookingStatus,
+        changedAt: BookingStatusHistoryDate,
+        changedBy: UserId?,
+        reason: BookingStatusReason?
+    )
+
+    fun findStatusHistory(bookingId: BookingId): List<BookingStatusHistory>
+
+    fun findOverlappingPendingBookings(
+        roomId: RoomId,
+        startDate: BookingStartDate,
+        endDate: BookingEndDate,
+        excludeBookingId: BookingId
+    ): List<Booking>
 }

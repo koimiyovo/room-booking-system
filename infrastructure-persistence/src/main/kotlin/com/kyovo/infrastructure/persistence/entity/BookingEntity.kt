@@ -3,8 +3,10 @@ package com.kyovo.infrastructure.persistence.entity
 import com.kyovo.domain.model.booking.*
 import com.kyovo.domain.model.room.RoomId
 import com.kyovo.domain.model.user.UserId
+import com.kyovo.infrastructure.persistence.exception.InvalidBookingStatusException
 import jakarta.persistence.*
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.util.*
 
 @Entity
@@ -36,12 +38,19 @@ class BookingEntity(
     @Column(nullable = false)
     val status: String,
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
-    @JoinColumn(name = "cancelled_by", nullable = true, foreignKey = ForeignKey(name = "fk_booking_cancelled_by"))
-    val cancelledByUser: UserEntity?,
+    @Column(name = "status_since", nullable = false)
+    val statusSince: OffsetDateTime,
 
-    @Column(name = "cancellation_reason", nullable = true)
-    val cancellationReason: String?
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(
+        name = "status_changed_by",
+        nullable = true,
+        foreignKey = ForeignKey(name = "fk_booking_status_changed_by")
+    )
+    val statusChangedByUser: UserEntity?,
+
+    @Column(name = "status_reason", nullable = true)
+    val statusReason: String?
 )
 {
     companion object
@@ -50,7 +59,7 @@ class BookingEntity(
             booking: Booking,
             room: RoomEntity,
             user: UserEntity,
-            cancelledByUser: UserEntity?
+            statusChangedByUser: UserEntity?
         ): BookingEntity
         {
             return BookingEntity(
@@ -61,21 +70,24 @@ class BookingEntity(
                 endDate = booking.endDate.value,
                 numberOfPeople = booking.numberOfPeople.value,
                 specialRequests = booking.specialRequests?.value,
-                status = booking.status.label,
-                cancellationReason = booking.cancellation?.reason?.value,
-                cancelledByUser = cancelledByUser
+                status = booking.statusInfo.status.label,
+                statusSince = booking.statusInfo.since.value,
+                statusChangedByUser = statusChangedByUser,
+                statusReason = booking.statusInfo.reason?.value
             )
         }
     }
 
     fun toDomain(): Booking
     {
-        val cancellation = cancelledByUser?.let {
-            Cancellation(
-                cancelledBy = UserId(it.id),
-                reason = cancellationReason?.let { r -> BookingCancellationReason(r) }
-            )
-        }
+        val parsedStatus = BookingStatus.entries.firstOrNull { it.label == status }
+            ?: throw InvalidBookingStatusException(status)
+        val statusInfo = BookingStatusInfo(
+            status = parsedStatus,
+            since = BookingStatusInfoDate(statusSince),
+            changedBy = statusChangedByUser?.let { UserId(it.id) },
+            reason = statusReason?.let { BookingStatusReason(it) }
+        )
         return Booking(
             id = BookingId(id),
             roomId = RoomId(room.id),
@@ -84,7 +96,7 @@ class BookingEntity(
             endDate = BookingEndDate(endDate),
             numberOfPeople = BookingNumberOfPeople(numberOfPeople),
             specialRequests = specialRequests?.let { BookingSpecialRequests(it) },
-            cancellation = cancellation
+            statusInfo = statusInfo
         )
     }
 }

@@ -26,7 +26,9 @@
       "Bash(curl -s \"https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide\")",
       "Bash(git mv *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\bonbo\\\\IdeaProjects\\\\room-booking-system\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\bonbo\\\\IdeaProjects\\\\room-booking-system\\\\infrastructure-api\\\\src\\\\main\\\\kotlin\\\\com\\\\kyovo\\\\infrastructure\\\\api\" -Filter \"GlobalExceptionHandler.kt\" | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\bonbo\\\\IdeaProjects\\\\room-booking-system\\\\bootstrap\\\\src\\\\main\\\\kotlin\\\\com\\\\kyovo\" -Filter \"DataInitializer.kt\" | ForEach-Object { $_.FullName })"
     ]
   }
 }

@@ -2,6 +2,7 @@ package com.kyovo.infrastructure.api.controller
 
 import com.kyovo.domain.exception.BookingAlreadyCancelledException
 import com.kyovo.domain.exception.BookingConflictException
+import com.kyovo.domain.exception.BookingNotPendingException
 import com.kyovo.domain.exception.RoomCapacityExceededException
 import com.kyovo.domain.exception.RoomNotFoundException
 import com.kyovo.domain.model.booking.*
@@ -28,6 +29,7 @@ import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.post
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.util.*
 
 @WebMvcTest(BookingController::class)
@@ -53,6 +55,14 @@ class BookingControllerWebMvcTest
     private val userId = UUID.fromString("770e8400-e29b-41d4-a716-446655440002")
     private val startDate = LocalDate.of(2026, 6, 1)
     private val endDate = LocalDate.of(2026, 6, 3)
+    private val now = OffsetDateTime.now()
+
+    private val confirmedStatusInfo = BookingStatusInfo(
+        status = BookingStatus.CONFIRMED,
+        since = BookingStatusInfoDate(now),
+        changedBy = null,
+        reason = null
+    )
 
     private val booking = Booking(
         id = BookingId(bookingId),
@@ -62,7 +72,7 @@ class BookingControllerWebMvcTest
         endDate = BookingEndDate(endDate),
         numberOfPeople = BookingNumberOfPeople(5),
         specialRequests = null,
-        cancellation = null
+        statusInfo = confirmedStatusInfo
     )
 
     private val request = CreateBookingRequest(roomId, userId, startDate, endDate, 5, null)
@@ -201,9 +211,15 @@ class BookingControllerWebMvcTest
     @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
     fun `POST api-bookings-id-cancel returns 200 with cancelled booking`()
     {
-        val cancelledBooking =
-            booking.copy(cancellation = Cancellation(UserId(userId), BookingCancellationReason("Change of plans")))
-        whenever(bookingUseCase.cancel(any(), any(), any(), anyOrNull())).thenReturn(cancelledBooking)
+        val CANCELEDBooking = booking.copy(
+            statusInfo = BookingStatusInfo(
+                status = BookingStatus.CANCELED,
+                since = BookingStatusInfoDate(now),
+                changedBy = UserId(userId),
+                reason = BookingStatusReason("Change of plans")
+            )
+        )
+        whenever(bookingUseCase.cancel(any(), any(), any(), anyOrNull())).thenReturn(CANCELEDBooking)
 
         mockMvc.post("/api/bookings/$bookingId/cancel") {
             contentType = MediaType.APPLICATION_JSON
@@ -212,8 +228,8 @@ class BookingControllerWebMvcTest
         }.andExpect {
             status { isOk() }
             jsonPath("$.status") { value("CANCELLED") }
-            jsonPath("$.cancellation.reason") { value("Change of plans") }
-            jsonPath("$.cancellation.cancelled_by") { value(userId.toString()) }
+            jsonPath("$.status_info.reason") { value("Change of plans") }
+            jsonPath("$.status_info.changed_by") { value(userId.toString()) }
         }
     }
 
@@ -230,6 +246,101 @@ class BookingControllerWebMvcTest
             with(csrf())
         }.andExpect {
             status { isConflict() }
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
+    fun `GET api-bookings-id-history returns 200 with status history for booking owner`()
+    {
+        val history = listOf(
+            BookingStatusHistory(
+                BookingId(bookingId),
+                BookingStatus.CONFIRMED,
+                BookingStatusHistoryDate(now),
+                UserId(userId),
+                null
+            )
+        )
+        whenever(bookingUseCase.findById(BookingId(bookingId))).thenReturn(booking)
+        whenever(bookingUseCase.findStatusHistory(BookingId(bookingId))).thenReturn(history)
+
+        mockMvc.get("/api/bookings/$bookingId/history")
+            .andExpect {
+                status { isOk() }
+                jsonPath("$[0].status") { value("CONFIRMED") }
+                jsonPath("$[0].changed_by") { value(userId.toString()) }
+            }
+    }
+
+    @Test
+    @WithMockUser(username = "99999999-9999-9999-9999-999999999999", roles = ["USER"])
+    fun `GET api-bookings-id-history returns 403 when user accesses another user booking history`()
+    {
+        whenever(bookingUseCase.findById(BookingId(bookingId))).thenReturn(booking)
+
+        mockMvc.get("/api/bookings/$bookingId/history")
+            .andExpect {
+                status { isForbidden() }
+            }
+    }
+
+    @Test
+    @WithMockUser(roles = ["USER"])
+    fun `GET api-bookings-id-history returns 404 when booking does not exist`()
+    {
+        whenever(bookingUseCase.findById(BookingId(bookingId))).thenReturn(null)
+
+        mockMvc.get("/api/bookings/$bookingId/history")
+            .andExpect {
+                status { isNotFound() }
+            }
+    }
+
+    @Test
+    @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["ADMIN"])
+    fun `POST api-bookings-id-validate returns 200 with CONFIRMED booking`()
+    {
+        val confirmedBooking = booking.copy(
+            statusInfo = BookingStatusInfo(
+                status = BookingStatus.CONFIRMED,
+                since = BookingStatusInfoDate(now),
+                changedBy = UserId(userId),
+                reason = null
+            )
+        )
+        whenever(bookingUseCase.validate(any(), any())).thenReturn(confirmedBooking)
+
+        mockMvc.post("/api/bookings/$bookingId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status") { value("CONFIRMED") }
+            jsonPath("$.status_info.changed_by") { value(userId.toString()) }
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["ADMIN"])
+    fun `POST api-bookings-id-validate returns 409 when booking is not pending`()
+    {
+        whenever(bookingUseCase.validate(any(), any())).thenThrow(BookingNotPendingException(BookingId(bookingId)))
+
+        mockMvc.post("/api/bookings/$bookingId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
+    fun `POST api-bookings-id-validate returns 403 for non-admin user`()
+    {
+        mockMvc.post("/api/bookings/$bookingId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isForbidden() }
         }
     }
 }

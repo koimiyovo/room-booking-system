@@ -11,12 +11,19 @@ data class Booking(
     val endDate: BookingEndDate,
     val numberOfPeople: BookingNumberOfPeople,
     val specialRequests: BookingSpecialRequests?,
-    val cancellation: Cancellation?
+    val statusInfo: BookingStatusInfo
 )
 {
-    val status: BookingStatus
-        get()
-        {
-            return if (cancellation == null) BookingStatus.CONFIRMED else BookingStatus.CANCELLED
-        }
+    val status: BookingStatus get() = statusInfo.status
+
+    fun transitionTo(
+        target: BookingStatus,
+        now: BookingStatusInfoDate,
+        changedBy: UserId?,
+        reason: BookingStatusReason?
+    ): Booking?
+    {
+        if (!statusInfo.status.canTransitionTo(target)) return null
+        return copy(statusInfo = BookingStatusInfo(target, now, changedBy, reason))
+    }
 }

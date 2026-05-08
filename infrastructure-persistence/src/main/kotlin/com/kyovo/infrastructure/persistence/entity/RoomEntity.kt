@@ -4,10 +4,8 @@ import com.kyovo.domain.model.room.Room
 import com.kyovo.domain.model.room.RoomCapacity
 import com.kyovo.domain.model.room.RoomId
 import com.kyovo.domain.model.room.RoomName
-import jakarta.persistence.Column
-import jakarta.persistence.Entity
-import jakarta.persistence.Id
-import jakarta.persistence.Table
+import com.kyovo.domain.model.user.UserId
+import jakarta.persistence.*
 import java.util.*
 
 @Entity
@@ -20,17 +18,26 @@ class RoomEntity(
     val name: String,
 
     @Column(nullable = false)
-    val capacity: Int
+    val capacity: Int,
+
+    @Column(name = "requires_validation", nullable = false)
+    val requiresValidation: Boolean,
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by", nullable = false, foreignKey = ForeignKey(name = "fk_room_created_by"))
+    val createdByUser: UserEntity
 )
 {
     companion object
     {
-        fun fromDomain(room: Room): RoomEntity
+        fun fromDomain(room: Room, createdByUser: UserEntity): RoomEntity
         {
             return RoomEntity(
                 id = room.id.value,
                 name = room.name.value,
-                capacity = room.capacity.value
+                capacity = room.capacity.value,
+                requiresValidation = room.requiresValidation,
+                createdByUser = createdByUser
             )
         }
     }
@@ -40,7 +47,9 @@ class RoomEntity(
         return Room(
             id = RoomId(id),
             name = RoomName(name),
-            capacity = RoomCapacity(capacity)
+            capacity = RoomCapacity(capacity),
+            requiresValidation = requiresValidation,
+            createdBy = UserId(createdByUser.id)
         )
     }
 }

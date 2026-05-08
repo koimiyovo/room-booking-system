@@ -1,6 +1,7 @@
 package com.kyovo.infrastructure.api.controller
 
 import com.kyovo.domain.model.room.RoomId
+import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.port.primary.RoomUseCase
 import com.kyovo.infrastructure.api.dto.CreateRoomRequest
 import com.kyovo.infrastructure.api.dto.CreateRoomResponse
@@ -12,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
 import java.util.*
 
@@ -55,13 +57,16 @@ class RoomController(private val roomUseCase: RoomUseCase)
         ApiResponse(responseCode = "401", description = "Authentication required"),
         ApiResponse(responseCode = "403", description = "Admin role required")
     )
-    fun create(@RequestBody request: CreateRoomRequest): ResponseEntity<CreateRoomResponse>
+    fun create(@RequestBody request: CreateRoomRequest, authentication: Authentication): ResponseEntity<CreateRoomResponse>
     {
-        val room = roomUseCase.save(request.toNewRoom())
+        val createdBy = UserId(UUID.fromString(authentication.name))
+        val room = roomUseCase.save(request.toNewRoom(createdBy))
         val response = CreateRoomResponse(
             id = room.id.value,
             name = room.name.value,
-            capacity = room.capacity.value
+            capacity = room.capacity.value,
+            requiresValidation = room.requiresValidation,
+            createdBy = room.createdBy.value
         )
         return ResponseEntity(response, HttpStatus.CREATED)
     }
