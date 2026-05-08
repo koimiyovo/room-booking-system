@@ -79,11 +79,11 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `GET api-bookings returns 200 with the list of bookings`()
+    fun `GET api-v1-bookings returns 200 with the list of bookings`()
     {
         whenever(bookingUseCase.findAll()).thenReturn(listOf(booking))
 
-        mockMvc.get("/api/bookings")
+        mockMvc.get("/api/v1/bookings")
             .andExpect {
                 status { isOk() }
                 jsonPath("$[0].id") { value(bookingId.toString()) }
@@ -93,11 +93,11 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
-    fun `GET api-bookings-my returns 200 with the authenticated user bookings`()
+    fun `GET api-v1-bookings-my returns 200 with the authenticated user bookings`()
     {
         whenever(bookingUseCase.findByUserId(UserId(userId))).thenReturn(listOf(booking))
 
-        mockMvc.get("/api/bookings/my")
+        mockMvc.get("/api/v1/bookings/my")
             .andExpect {
                 status { isOk() }
                 jsonPath("$[0].id") { value(bookingId.toString()) }
@@ -106,11 +106,11 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
-    fun `GET api-bookings-id returns 200 when user accesses own booking`()
+    fun `GET api-v1-bookings-id returns 200 when user accesses own booking`()
     {
         whenever(bookingUseCase.findById(BookingId(bookingId))).thenReturn(booking)
 
-        mockMvc.get("/api/bookings/$bookingId")
+        mockMvc.get("/api/v1/bookings/$bookingId")
             .andExpect {
                 status { isOk() }
                 jsonPath("$.id") { value(bookingId.toString()) }
@@ -119,11 +119,11 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "99999999-9999-9999-9999-999999999999", roles = ["USER"])
-    fun `GET api-bookings-id returns 403 when user accesses another user booking`()
+    fun `GET api-v1-bookings-id returns 403 when user accesses another user booking`()
     {
         whenever(bookingUseCase.findById(BookingId(bookingId))).thenReturn(booking)
 
-        mockMvc.get("/api/bookings/$bookingId")
+        mockMvc.get("/api/v1/bookings/$bookingId")
             .andExpect {
                 status { isForbidden() }
             }
@@ -131,11 +131,11 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["USER"])
-    fun `GET api-bookings-id returns 404 when the booking does not exist`()
+    fun `GET api-v1-bookings-id returns 404 when the booking does not exist`()
     {
         whenever(bookingUseCase.findById(BookingId(bookingId))).thenReturn(null)
 
-        mockMvc.get("/api/bookings/$bookingId")
+        mockMvc.get("/api/v1/bookings/$bookingId")
             .andExpect {
                 status { isNotFound() }
             }
@@ -143,11 +143,11 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["USER"])
-    fun `POST api-bookings returns 201 with the created booking`()
+    fun `POST api-v1-bookings returns 201 with the created booking`()
     {
         whenever(bookingUseCase.create(any())).thenReturn(booking)
 
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             with(csrf())
@@ -160,11 +160,11 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["USER"])
-    fun `POST api-bookings returns 404 when room does not exist`()
+    fun `POST api-v1-bookings returns 404 when room does not exist`()
     {
         whenever(bookingUseCase.create(any())).thenThrow(RoomNotFoundException(RoomId(roomId)))
 
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             with(csrf())
@@ -175,13 +175,13 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["USER"])
-    fun `POST api-bookings returns 400 when capacity is exceeded`()
+    fun `POST api-v1-bookings returns 400 when capacity is exceeded`()
     {
         whenever(bookingUseCase.create(any())).thenThrow(
             RoomCapacityExceededException(BookingNumberOfPeople(15), RoomCapacity(10))
         )
 
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             with(csrf())
@@ -192,13 +192,13 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["USER"])
-    fun `POST api-bookings returns 409 when booking conflicts`()
+    fun `POST api-v1-bookings returns 409 when booking conflicts`()
     {
         whenever(bookingUseCase.create(any())).thenThrow(
             BookingConflictException(RoomId(roomId), BookingStartDate(startDate), BookingEndDate(endDate))
         )
 
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             with(csrf())
@@ -209,7 +209,7 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
-    fun `POST api-bookings-id-cancel returns 200 with cancelled booking`()
+    fun `POST api-v1-bookings-id-cancel returns 200 with cancelled booking`()
     {
         val CANCELEDBooking = booking.copy(
             statusInfo = BookingStatusInfo(
@@ -221,7 +221,7 @@ class BookingControllerWebMvcTest
         )
         whenever(bookingUseCase.cancel(any(), any(), any(), anyOrNull())).thenReturn(CANCELEDBooking)
 
-        mockMvc.post("/api/bookings/$bookingId/cancel") {
+        mockMvc.post("/api/v1/bookings/$bookingId/cancel") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CancelBookingRequest("Change of plans"))
             with(csrf())
@@ -235,12 +235,12 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
-    fun `POST api-bookings-id-cancel returns 409 when booking is already cancelled`()
+    fun `POST api-v1-bookings-id-cancel returns 409 when booking is already cancelled`()
     {
         whenever(bookingUseCase.cancel(any(), any(), any(), anyOrNull()))
             .thenThrow(BookingAlreadyCancelledException(BookingId(bookingId)))
 
-        mockMvc.post("/api/bookings/$bookingId/cancel") {
+        mockMvc.post("/api/v1/bookings/$bookingId/cancel") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CancelBookingRequest(null))
             with(csrf())
@@ -251,7 +251,7 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
-    fun `GET api-bookings-id-history returns 200 with status history for booking owner`()
+    fun `GET api-v1-bookings-id-history returns 200 with status history for booking owner`()
     {
         val history = listOf(
             BookingStatusHistory(
@@ -265,7 +265,7 @@ class BookingControllerWebMvcTest
         whenever(bookingUseCase.findById(BookingId(bookingId))).thenReturn(booking)
         whenever(bookingUseCase.findStatusHistory(BookingId(bookingId))).thenReturn(history)
 
-        mockMvc.get("/api/bookings/$bookingId/history")
+        mockMvc.get("/api/v1/bookings/$bookingId/history")
             .andExpect {
                 status { isOk() }
                 jsonPath("$[0].status") { value("CONFIRMED") }
@@ -275,11 +275,11 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "99999999-9999-9999-9999-999999999999", roles = ["USER"])
-    fun `GET api-bookings-id-history returns 403 when user accesses another user booking history`()
+    fun `GET api-v1-bookings-id-history returns 403 when user accesses another user booking history`()
     {
         whenever(bookingUseCase.findById(BookingId(bookingId))).thenReturn(booking)
 
-        mockMvc.get("/api/bookings/$bookingId/history")
+        mockMvc.get("/api/v1/bookings/$bookingId/history")
             .andExpect {
                 status { isForbidden() }
             }
@@ -287,11 +287,11 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["USER"])
-    fun `GET api-bookings-id-history returns 404 when booking does not exist`()
+    fun `GET api-v1-bookings-id-history returns 404 when booking does not exist`()
     {
         whenever(bookingUseCase.findById(BookingId(bookingId))).thenReturn(null)
 
-        mockMvc.get("/api/bookings/$bookingId/history")
+        mockMvc.get("/api/v1/bookings/$bookingId/history")
             .andExpect {
                 status { isNotFound() }
             }
@@ -299,7 +299,7 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["ADMIN"])
-    fun `POST api-bookings-id-validate returns 200 with CONFIRMED booking`()
+    fun `POST api-v1-bookings-id-validate returns 200 with CONFIRMED booking`()
     {
         val confirmedBooking = booking.copy(
             statusInfo = BookingStatusInfo(
@@ -311,7 +311,7 @@ class BookingControllerWebMvcTest
         )
         whenever(bookingUseCase.validate(any(), any())).thenReturn(confirmedBooking)
 
-        mockMvc.post("/api/bookings/$bookingId/validate") {
+        mockMvc.post("/api/v1/bookings/$bookingId/validate") {
             with(csrf())
         }.andExpect {
             status { isOk() }
@@ -322,11 +322,11 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["ADMIN"])
-    fun `POST api-bookings-id-validate returns 409 when booking is not pending`()
+    fun `POST api-v1-bookings-id-validate returns 409 when booking is not pending`()
     {
         whenever(bookingUseCase.validate(any(), any())).thenThrow(BookingNotPendingException(BookingId(bookingId)))
 
-        mockMvc.post("/api/bookings/$bookingId/validate") {
+        mockMvc.post("/api/v1/bookings/$bookingId/validate") {
             with(csrf())
         }.andExpect {
             status { isConflict() }
@@ -335,9 +335,9 @@ class BookingControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
-    fun `POST api-bookings-id-validate returns 403 for non-admin user`()
+    fun `POST api-v1-bookings-id-validate returns 403 for non-admin user`()
     {
-        mockMvc.post("/api/bookings/$bookingId/validate") {
+        mockMvc.post("/api/v1/bookings/$bookingId/validate") {
             with(csrf())
         }.andExpect {
             status { isForbidden() }

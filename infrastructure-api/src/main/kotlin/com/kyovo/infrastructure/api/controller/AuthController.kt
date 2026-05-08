@@ -1,6 +1,7 @@
 package com.kyovo.infrastructure.api.controller
 
 import com.kyovo.domain.exception.InvalidCredentialsException
+import com.kyovo.infrastructure.api.API_V1
 import com.kyovo.domain.model.user.UserEmail
 import com.kyovo.domain.port.primary.AuthUseCase
 import com.kyovo.infrastructure.api.dto.LoginRequest
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("$API_V1/auth")
 @Tag(name = "Authentication", description = "Account registration and login")
 class AuthController(
     private val authUseCase: AuthUseCase,

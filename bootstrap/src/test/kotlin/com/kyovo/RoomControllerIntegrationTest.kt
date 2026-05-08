@@ -100,7 +100,7 @@ class RoomControllerIntegrationTest
 
     private fun loginAndGetToken(email: String, password: String): String
     {
-        val result = mockMvc.post("/api/auth/login") {
+        val result = mockMvc.post("/api/v1/auth/login") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(LoginRequest(email, password))
         }.andReturn()
@@ -108,9 +108,9 @@ class RoomControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-rooms returns 200 with empty list when no rooms exist`()
+    fun `GET api-v1-rooms returns 200 with empty list when no rooms exist`()
     {
-        mockMvc.get("/api/rooms") {
+        mockMvc.get("/api/v1/rooms") {
             header("Authorization", "Bearer $userToken")
         }.andExpect {
             status { isOk() }
@@ -119,9 +119,9 @@ class RoomControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-rooms returns 201 with the created room`()
+    fun `POST api-v1-rooms returns 201 with the created room`()
     {
-        mockMvc.post("/api/rooms") {
+        mockMvc.post("/api/v1/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Conférence", 25, false))
             header("Authorization", "Bearer $adminToken")
@@ -136,9 +136,9 @@ class RoomControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-rooms returns 403 when authenticated as USER`()
+    fun `POST api-v1-rooms returns 403 when authenticated as USER`()
     {
-        mockMvc.post("/api/rooms") {
+        mockMvc.post("/api/v1/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest("Salle", 10, false))
             header("Authorization", "Bearer $userToken")
@@ -148,9 +148,9 @@ class RoomControllerIntegrationTest
     }
 
     @Test
-    fun `POST then GET api-rooms returns the created room in the list`()
+    fun `POST then GET api-v1-rooms returns the created room in the list`()
     {
-        val postResult = mockMvc.post("/api/rooms") {
+        val postResult = mockMvc.post("/api/v1/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Réunion", 12, false))
             header("Authorization", "Bearer $adminToken")
@@ -158,7 +158,7 @@ class RoomControllerIntegrationTest
 
         val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.get("/api/rooms") {
+        mockMvc.get("/api/v1/rooms") {
             header("Authorization", "Bearer $userToken")
         }.andExpect {
             status { isOk() }
@@ -170,9 +170,9 @@ class RoomControllerIntegrationTest
     }
 
     @Test
-    fun `POST then GET api-rooms-id returns the room by its identifier`()
+    fun `POST then GET api-v1-rooms-id returns the room by its identifier`()
     {
-        val postResult = mockMvc.post("/api/rooms") {
+        val postResult = mockMvc.post("/api/v1/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Formation", 30, false))
             header("Authorization", "Bearer $adminToken")
@@ -180,7 +180,7 @@ class RoomControllerIntegrationTest
 
         val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.get("/api/rooms/$createdId") {
+        mockMvc.get("/api/v1/rooms/$createdId") {
             header("Authorization", "Bearer $userToken")
         }.andExpect {
             status { isOk() }
@@ -190,9 +190,9 @@ class RoomControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-rooms-id returns 404 for a non-existent identifier`()
+    fun `GET api-v1-rooms-id returns 404 for a non-existent identifier`()
     {
-        mockMvc.get("/api/rooms/${UUID.randomUUID()}") {
+        mockMvc.get("/api/v1/rooms/${UUID.randomUUID()}") {
             header("Authorization", "Bearer $userToken")
         }.andExpect {
             status { isNotFound() }

@@ -3,6 +3,7 @@ package com.kyovo.infrastructure.api.controller
 import com.kyovo.domain.model.room.RoomId
 import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.port.primary.RoomUseCase
+import com.kyovo.infrastructure.api.API_V1
 import com.kyovo.infrastructure.api.dto.CreateRoomRequest
 import com.kyovo.infrastructure.api.dto.CreateRoomResponse
 import com.kyovo.infrastructure.api.dto.RoomResponse
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*
 import java.util.*
 
 @RestController
-@RequestMapping("/api/rooms")
+@RequestMapping("$API_V1/rooms")
 @Tag(name = "Rooms", description = "Room management")
 class RoomController(private val roomUseCase: RoomUseCase)
 {

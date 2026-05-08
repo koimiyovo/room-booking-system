@@ -46,11 +46,11 @@ class RoomControllerWebMvcTest
     private val room = Room(RoomId(roomId), RoomName("Salle A"), RoomCapacity(10), false, UserId(adminId))
 
     @Test
-    fun `GET api-rooms returns 200 with the list of rooms`()
+    fun `GET api-v1-rooms returns 200 with the list of rooms`()
     {
         whenever(roomUseCase.findAll()).thenReturn(listOf(room))
 
-        mockMvc.get("/api/rooms")
+        mockMvc.get("/api/v1/rooms")
             .andExpect {
                 status { isOk() }
                 jsonPath("$[0].id") { value(roomId.toString()) }
@@ -60,11 +60,11 @@ class RoomControllerWebMvcTest
     }
 
     @Test
-    fun `GET api-rooms returns 200 with an empty list`()
+    fun `GET api-v1-rooms returns 200 with an empty list`()
     {
         whenever(roomUseCase.findAll()).thenReturn(emptyList())
 
-        mockMvc.get("/api/rooms")
+        mockMvc.get("/api/v1/rooms")
             .andExpect {
                 status { isOk() }
                 jsonPath("$") { isArray() }
@@ -73,11 +73,11 @@ class RoomControllerWebMvcTest
     }
 
     @Test
-    fun `GET api-rooms-id returns 200 with the room when it exists`()
+    fun `GET api-v1-rooms-id returns 200 with the room when it exists`()
     {
         whenever(roomUseCase.findById(RoomId(roomId))).thenReturn(room)
 
-        mockMvc.get("/api/rooms/$roomId")
+        mockMvc.get("/api/v1/rooms/$roomId")
             .andExpect {
                 status { isOk() }
                 jsonPath("$.id") { value(roomId.toString()) }
@@ -87,24 +87,24 @@ class RoomControllerWebMvcTest
     }
 
     @Test
-    fun `GET api-rooms-id returns 404 when the room does not exist`()
+    fun `GET api-v1-rooms-id returns 404 when the room does not exist`()
     {
         whenever(roomUseCase.findById(RoomId(roomId))).thenReturn(null)
 
-        mockMvc.get("/api/rooms/$roomId")
+        mockMvc.get("/api/v1/rooms/$roomId")
             .andExpect {
                 status { isNotFound() }
             }
     }
 
     @Test
-    fun `POST api-rooms returns 201 with the created room`()
+    fun `POST api-v1-rooms returns 201 with the created room`()
     {
         val request = CreateRoomRequest("Salle B", 20, false)
         val createdRoom = Room(RoomId(roomId), RoomName("Salle B"), RoomCapacity(20), false, UserId(adminId))
         whenever(roomUseCase.save(any())).thenReturn(createdRoom)
 
-        mockMvc.post("/api/rooms") {
+        mockMvc.post("/api/v1/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             with(csrf())
@@ -117,14 +117,14 @@ class RoomControllerWebMvcTest
     }
 
     @Test
-    fun `POST api-rooms calls the use case with the request body values`()
+    fun `POST api-v1-rooms calls the use case with the request body values`()
     {
         val request = CreateRoomRequest("Salle C", 30, false)
         whenever(roomUseCase.save(any())).thenReturn(
             Room(RoomId(roomId), RoomName("Salle C"), RoomCapacity(30), false, UserId(adminId))
         )
 
-        mockMvc.post("/api/rooms") {
+        mockMvc.post("/api/v1/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             with(csrf())
