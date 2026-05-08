@@ -1,6 +1,7 @@
 package com.kyovo.infrastructure.api.controller
 
 import com.kyovo.domain.model.booking.BookingId
+import com.kyovo.infrastructure.api.API_V1
 import com.kyovo.domain.model.booking.BookingStatusReason
 import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.model.user.UserRole.ADMIN
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.*
 import java.util.*
 
 @RestController
-@RequestMapping("/api/bookings")
+@RequestMapping("$API_V1/bookings")
 @Tag(name = "Bookings", description = "Booking management")
 class BookingController(private val bookingUseCase: BookingUseCase)
 {

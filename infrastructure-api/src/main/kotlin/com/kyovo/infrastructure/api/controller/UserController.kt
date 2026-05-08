@@ -1,6 +1,7 @@
 package com.kyovo.infrastructure.api.controller
 
 import com.kyovo.domain.model.user.UserId
+import com.kyovo.infrastructure.api.API_V1
 import com.kyovo.domain.model.user.UserRole.ADMIN
 import com.kyovo.domain.model.user.UserStatusReason
 import com.kyovo.domain.port.primary.UserUseCase
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.*
 import java.util.*
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("$API_V1/users")
 @Tag(name = "Users", description = "User management")
 class UserController(private val userUseCase: UserUseCase)
 {

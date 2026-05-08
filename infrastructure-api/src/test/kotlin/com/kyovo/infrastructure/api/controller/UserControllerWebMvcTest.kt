@@ -56,11 +56,11 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `GET api-users returns 200 with the list of users`()
+    fun `GET api-v1-users returns 200 with the list of users`()
     {
         whenever(userUseCase.findAll()).thenReturn(listOf(user))
 
-        mockMvc.get("/api/users")
+        mockMvc.get("/api/v1/users")
             .andExpect {
                 status { isOk() }
                 jsonPath("$[0].id") { value(userId.toString()) }
@@ -72,11 +72,11 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `GET api-users returns 200 with an empty list`()
+    fun `GET api-v1-users returns 200 with an empty list`()
     {
         whenever(userUseCase.findAll()).thenReturn(emptyList())
 
-        mockMvc.get("/api/users")
+        mockMvc.get("/api/v1/users")
             .andExpect {
                 status { isOk() }
                 content { json("[]") }
@@ -85,11 +85,11 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `GET api-users-id returns 200 with the user when it exists`()
+    fun `GET api-v1-users-id returns 200 with the user when it exists`()
     {
         whenever(userUseCase.findById(UserId(userId))).thenReturn(user)
 
-        mockMvc.get("/api/users/$userId")
+        mockMvc.get("/api/v1/users/$userId")
             .andExpect {
                 status { isOk() }
                 jsonPath("$.id") { value(userId.toString()) }
@@ -100,11 +100,11 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `GET api-users-id returns 404 when the user does not exist`()
+    fun `GET api-v1-users-id returns 404 when the user does not exist`()
     {
         whenever(userUseCase.findById(UserId(userId))).thenReturn(null)
 
-        mockMvc.get("/api/users/$userId")
+        mockMvc.get("/api/v1/users/$userId")
             .andExpect {
                 status { isNotFound() }
             }
@@ -112,14 +112,14 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000", roles = ["USER"])
-    fun `PUT api-users-id returns 200 when user updates own account`()
+    fun `PUT api-v1-users-id returns 200 when user updates own account`()
     {
         val request = UpdateUserRequest("Alice Updated", null, null)
         val updated = user.copy(name = UserName("Alice Updated"))
         whenever(userUseCase.update(any(), any())).thenReturn(updated)
         whenever(passwordHashPort.hash(any())).thenReturn(UserPassword("hashed"))
 
-        mockMvc.put("/api/users/$userId") {
+        mockMvc.put("/api/v1/users/$userId") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             with(csrf())
@@ -131,9 +131,9 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "99999999-9999-9999-9999-999999999999", roles = ["USER"])
-    fun `PUT api-users-id returns 403 when user updates another account`()
+    fun `PUT api-v1-users-id returns 403 when user updates another account`()
     {
-        mockMvc.put("/api/users/$userId") {
+        mockMvc.put("/api/v1/users/$userId") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(UpdateUserRequest("X", null, null))
             with(csrf())
@@ -144,9 +144,9 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000", roles = ["USER"])
-    fun `DELETE api-users-id returns 204 when user deletes own account`()
+    fun `DELETE api-v1-users-id returns 204 when user deletes own account`()
     {
-        mockMvc.delete("/api/users/$userId") {
+        mockMvc.delete("/api/v1/users/$userId") {
             with(csrf())
         }.andExpect {
             status { isNoContent() }
@@ -155,11 +155,11 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `DELETE api-users-id returns 404 when user does not exist`()
+    fun `DELETE api-v1-users-id returns 404 when user does not exist`()
     {
         whenever(userUseCase.delete(eq(UserId(userId)), anyOrNull())).thenThrow(UserNotFoundException(UserId(userId)))
 
-        mockMvc.delete("/api/users/$userId") {
+        mockMvc.delete("/api/v1/users/$userId") {
             with(csrf())
         }.andExpect {
             status { isNotFound() }
@@ -168,9 +168,9 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "99999999-9999-9999-9999-999999999999", roles = ["USER"])
-    fun `DELETE api-users-id returns 403 when user deletes another account`()
+    fun `DELETE api-v1-users-id returns 403 when user deletes another account`()
     {
-        mockMvc.delete("/api/users/$userId") {
+        mockMvc.delete("/api/v1/users/$userId") {
             with(csrf())
         }.andExpect {
             status { isForbidden() }
@@ -179,14 +179,14 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000", roles = ["USER"])
-    fun `POST api-users-id-validate returns 200 when user validates own account`()
+    fun `POST api-v1-users-id-validate returns 200 when user validates own account`()
     {
         val activeUser = user.copy(
             statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
         )
         whenever(userUseCase.validate(any(), any(), any(), anyOrNull())).thenReturn(activeUser)
 
-        mockMvc.post("/api/users/$userId/validate") {
+        mockMvc.post("/api/v1/users/$userId/validate") {
             with(csrf())
         }.andExpect {
             status { isOk() }
@@ -197,11 +197,11 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "99999999-9999-9999-9999-999999999999", roles = ["USER"])
-    fun `POST api-users-id-validate returns 403 when non-admin user validates another account`()
+    fun `POST api-v1-users-id-validate returns 403 when non-admin user validates another account`()
     {
         whenever(userUseCase.validate(any(), any(), any(), anyOrNull())).thenThrow(AccountNotOwnedByUserException())
 
-        mockMvc.post("/api/users/$userId/validate") {
+        mockMvc.post("/api/v1/users/$userId/validate") {
             with(csrf())
         }.andExpect {
             status { isForbidden() }
@@ -210,12 +210,12 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(username = "550e8400-e29b-41d4-a716-446655440000", roles = ["USER"])
-    fun `POST api-users-id-validate returns 409 when status transition is invalid`()
+    fun `POST api-v1-users-id-validate returns 409 when status transition is invalid`()
     {
         whenever(userUseCase.validate(any(), any(), any(), anyOrNull()))
             .thenThrow(InvalidStatusTransitionException(UserStatus.ACTIVE, UserStatus.ACTIVE))
 
-        mockMvc.post("/api/users/$userId/validate") {
+        mockMvc.post("/api/v1/users/$userId/validate") {
             with(csrf())
         }.andExpect {
             status { isConflict() }
@@ -223,9 +223,9 @@ class UserControllerWebMvcTest
     }
 
     @Test
-    fun `POST api-users-id-validate returns 401 when unauthenticated`()
+    fun `POST api-v1-users-id-validate returns 401 when unauthenticated`()
     {
-        mockMvc.post("/api/users/$userId/validate") {
+        mockMvc.post("/api/v1/users/$userId/validate") {
             with(csrf())
         }.andExpect {
             status { isUnauthorized() }
@@ -234,14 +234,14 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `POST api-users-id-deactivate returns 200 when admin deactivates an active account`()
+    fun `POST api-v1-users-id-deactivate returns 200 when admin deactivates an active account`()
     {
         val inactiveUser = user.copy(
             statusInfo = UserStatusInfo(status = UserStatus.INACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
         )
         whenever(userUseCase.deactivate(eq(UserId(userId)), anyOrNull())).thenReturn(inactiveUser)
 
-        mockMvc.post("/api/users/$userId/deactivate") {
+        mockMvc.post("/api/v1/users/$userId/deactivate") {
             with(csrf())
         }.andExpect {
             status { isOk() }
@@ -251,9 +251,9 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["USER"])
-    fun `POST api-users-id-deactivate returns 403 when called by a non-admin user`()
+    fun `POST api-v1-users-id-deactivate returns 403 when called by a non-admin user`()
     {
-        mockMvc.post("/api/users/$userId/deactivate") {
+        mockMvc.post("/api/v1/users/$userId/deactivate") {
             with(csrf())
         }.andExpect {
             status { isForbidden() }
@@ -262,11 +262,11 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `POST api-users-id-deactivate returns 404 when user does not exist`()
+    fun `POST api-v1-users-id-deactivate returns 404 when user does not exist`()
     {
         whenever(userUseCase.deactivate(eq(UserId(userId)), anyOrNull())).thenThrow(UserNotFoundException(UserId(userId)))
 
-        mockMvc.post("/api/users/$userId/deactivate") {
+        mockMvc.post("/api/v1/users/$userId/deactivate") {
             with(csrf())
         }.andExpect {
             status { isNotFound() }
@@ -275,12 +275,12 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `POST api-users-id-deactivate returns 409 when status transition is invalid`()
+    fun `POST api-v1-users-id-deactivate returns 409 when status transition is invalid`()
     {
         whenever(userUseCase.deactivate(eq(UserId(userId)), anyOrNull()))
             .thenThrow(InvalidStatusTransitionException(UserStatus.CREATED, UserStatus.INACTIVE))
 
-        mockMvc.post("/api/users/$userId/deactivate") {
+        mockMvc.post("/api/v1/users/$userId/deactivate") {
             with(csrf())
         }.andExpect {
             status { isConflict() }
@@ -288,9 +288,9 @@ class UserControllerWebMvcTest
     }
 
     @Test
-    fun `POST api-users-id-deactivate returns 401 when unauthenticated`()
+    fun `POST api-v1-users-id-deactivate returns 401 when unauthenticated`()
     {
-        mockMvc.post("/api/users/$userId/deactivate") {
+        mockMvc.post("/api/v1/users/$userId/deactivate") {
             with(csrf())
         }.andExpect {
             status { isUnauthorized() }
@@ -299,14 +299,14 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `POST api-users-id-reactivate returns 200 when admin reactivates an inactive account`()
+    fun `POST api-v1-users-id-reactivate returns 200 when admin reactivates an inactive account`()
     {
         val activeUser = user.copy(
             statusInfo = UserStatusInfo(status = UserStatus.ACTIVE, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
         )
         whenever(userUseCase.reactivate(eq(UserId(userId)), anyOrNull())).thenReturn(activeUser)
 
-        mockMvc.post("/api/users/$userId/reactivate") {
+        mockMvc.post("/api/v1/users/$userId/reactivate") {
             with(csrf())
         }.andExpect {
             status { isOk() }
@@ -316,9 +316,9 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["USER"])
-    fun `POST api-users-id-reactivate returns 403 when called by a non-admin user`()
+    fun `POST api-v1-users-id-reactivate returns 403 when called by a non-admin user`()
     {
-        mockMvc.post("/api/users/$userId/reactivate") {
+        mockMvc.post("/api/v1/users/$userId/reactivate") {
             with(csrf())
         }.andExpect {
             status { isForbidden() }
@@ -327,11 +327,11 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `POST api-users-id-reactivate returns 404 when user does not exist`()
+    fun `POST api-v1-users-id-reactivate returns 404 when user does not exist`()
     {
         whenever(userUseCase.reactivate(eq(UserId(userId)), anyOrNull())).thenThrow(UserNotFoundException(UserId(userId)))
 
-        mockMvc.post("/api/users/$userId/reactivate") {
+        mockMvc.post("/api/v1/users/$userId/reactivate") {
             with(csrf())
         }.andExpect {
             status { isNotFound() }
@@ -340,12 +340,12 @@ class UserControllerWebMvcTest
 
     @Test
     @WithMockUser(roles = ["ADMIN"])
-    fun `POST api-users-id-reactivate returns 409 when status transition is invalid`()
+    fun `POST api-v1-users-id-reactivate returns 409 when status transition is invalid`()
     {
         whenever(userUseCase.reactivate(eq(UserId(userId)), anyOrNull()))
             .thenThrow(InvalidStatusTransitionException(UserStatus.ACTIVE, UserStatus.ACTIVE))
 
-        mockMvc.post("/api/users/$userId/reactivate") {
+        mockMvc.post("/api/v1/users/$userId/reactivate") {
             with(csrf())
         }.andExpect {
             status { isConflict() }
@@ -353,9 +353,9 @@ class UserControllerWebMvcTest
     }
 
     @Test
-    fun `POST api-users-id-reactivate returns 401 when unauthenticated`()
+    fun `POST api-v1-users-id-reactivate returns 401 when unauthenticated`()
     {
-        mockMvc.post("/api/users/$userId/reactivate") {
+        mockMvc.post("/api/v1/users/$userId/reactivate") {
             with(csrf())
         }.andExpect {
             status { isUnauthorized() }

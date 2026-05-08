@@ -28,7 +28,11 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\bonbo\\\\IdeaProjects\\\\room-booking-system\" -Directory)",
       "Bash(Select-Object Name)",
       "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\bonbo\\\\IdeaProjects\\\\room-booking-system\\\\infrastructure-api\\\\src\\\\main\\\\kotlin\\\\com\\\\kyovo\\\\infrastructure\\\\api\" -Filter \"GlobalExceptionHandler.kt\" | ForEach-Object { $_.FullName })",
-      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\bonbo\\\\IdeaProjects\\\\room-booking-system\\\\bootstrap\\\\src\\\\main\\\\kotlin\\\\com\\\\kyovo\" -Filter \"DataInitializer.kt\" | ForEach-Object { $_.FullName })"
+      "PowerShell(Get-ChildItem -Recurse -Path \"C:\\\\Users\\\\bonbo\\\\IdeaProjects\\\\room-booking-system\\\\bootstrap\\\\src\\\\main\\\\kotlin\\\\com\\\\kyovo\" -Filter \"DataInitializer.kt\" | ForEach-Object { $_.FullName })",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\bonbo\\\\IdeaProjects\\\\room-booking-system\" -Recurse -Filter \"*Controller.java\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Select-String -Pattern \"BUILD|Tests run|ERROR|FAILURE|SUCCESS\")",
+      "Bash(Select-Object -Last 15)"
     ]
   }
 }

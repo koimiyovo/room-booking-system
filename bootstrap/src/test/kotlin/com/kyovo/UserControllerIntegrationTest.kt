@@ -96,7 +96,7 @@ class UserControllerIntegrationTest
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
 
-        val registerResult = mockMvc.post("/api/auth/register") {
+        val registerResult = mockMvc.post("/api/v1/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Alice", "alice@test.com", "alice123"))
         }.andReturn()
@@ -106,7 +106,7 @@ class UserControllerIntegrationTest
 
     private fun loginAndGetToken(email: String, password: String): String
     {
-        val result = mockMvc.post("/api/auth/login") {
+        val result = mockMvc.post("/api/v1/auth/login") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(LoginRequest(email, password))
         }.andReturn()
@@ -114,9 +114,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-users returns 200 with all users when authenticated as ADMIN`()
+    fun `GET api-v1-users returns 200 with all users when authenticated as ADMIN`()
     {
-        mockMvc.get("/api/users") {
+        mockMvc.get("/api/v1/users") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isOk() }
@@ -125,9 +125,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-users returns 403 when authenticated as USER`()
+    fun `GET api-v1-users returns 403 when authenticated as USER`()
     {
-        mockMvc.get("/api/users") {
+        mockMvc.get("/api/v1/users") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isForbidden() }
@@ -135,9 +135,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-users-id returns 200 when authenticated as ADMIN`()
+    fun `GET api-v1-users-id returns 200 when authenticated as ADMIN`()
     {
-        mockMvc.get("/api/users/$aliceId") {
+        mockMvc.get("/api/v1/users/$aliceId") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isOk() }
@@ -149,9 +149,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-users-id returns 404 for a non-existent identifier`()
+    fun `GET api-v1-users-id returns 404 for a non-existent identifier`()
     {
-        mockMvc.get("/api/users/${UUID.randomUUID()}") {
+        mockMvc.get("/api/v1/users/${UUID.randomUUID()}") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isNotFound() }
@@ -159,7 +159,7 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-users-id returns 500 when user role is invalid`()
+    fun `GET api-v1-users-id returns 500 when user role is invalid`()
     {
         val savedUser = userJpaRepository.save(
             UserEntity(
@@ -182,7 +182,7 @@ class UserControllerIntegrationTest
             )
         )
 
-        mockMvc.get("/api/users/${savedUser.id}") {
+        mockMvc.get("/api/v1/users/${savedUser.id}") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isInternalServerError() }
@@ -190,7 +190,7 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-users-id returns 500 when user status is invalid`()
+    fun `GET api-v1-users-id returns 500 when user status is invalid`()
     {
         val savedUser = userJpaRepository.save(
             UserEntity(
@@ -213,7 +213,7 @@ class UserControllerIntegrationTest
             )
         )
 
-        mockMvc.get("/api/users/${savedUser.id}") {
+        mockMvc.get("/api/v1/users/${savedUser.id}") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isInternalServerError() }
@@ -221,9 +221,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `PUT api-users-id returns 200 when user updates own account`()
+    fun `PUT api-v1-users-id returns 200 when user updates own account`()
     {
-        mockMvc.put("/api/users/$aliceId") {
+        mockMvc.put("/api/v1/users/$aliceId") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(UpdateUserRequest("Alice Updated", null, null))
             header("Authorization", "Bearer $aliceToken")
@@ -237,15 +237,15 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `PUT api-users-id returns 403 when user updates another account`()
+    fun `PUT api-v1-users-id returns 403 when user updates another account`()
     {
-        val otherResult = mockMvc.post("/api/auth/register") {
+        val otherResult = mockMvc.post("/api/v1/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Bob", "bob@test.com", "bob123"))
         }.andReturn()
         val bobId = objectMapper.readTree(otherResult.response.contentAsString)["id"].asString()
 
-        mockMvc.put("/api/users/$bobId") {
+        mockMvc.put("/api/v1/users/$bobId") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(UpdateUserRequest("Hacked", null, null))
             header("Authorization", "Bearer $aliceToken")
@@ -255,9 +255,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `DELETE api-users-id returns 204 when user deletes own account`()
+    fun `DELETE api-v1-users-id returns 204 when user deletes own account`()
     {
-        mockMvc.delete("/api/users/$aliceId") {
+        mockMvc.delete("/api/v1/users/$aliceId") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isNoContent() }
@@ -268,9 +268,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `DELETE api-users-id does not physically remove the user row`()
+    fun `DELETE api-v1-users-id does not physically remove the user row`()
     {
-        mockMvc.delete("/api/users/$aliceId") {
+        mockMvc.delete("/api/v1/users/$aliceId") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isNoContent() }
@@ -280,13 +280,13 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-users includes deleted users`()
+    fun `GET api-v1-users includes deleted users`()
     {
-        mockMvc.delete("/api/users/$aliceId") {
+        mockMvc.delete("/api/v1/users/$aliceId") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect { status { isNoContent() } }
 
-        mockMvc.get("/api/users") {
+        mockMvc.get("/api/v1/users") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isOk() }
@@ -295,13 +295,13 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-users-id returns 404 for a deleted user`()
+    fun `GET api-v1-users-id returns 404 for a deleted user`()
     {
-        mockMvc.delete("/api/users/$aliceId") {
+        mockMvc.delete("/api/v1/users/$aliceId") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect { status { isNoContent() } }
 
-        mockMvc.get("/api/users/$aliceId") {
+        mockMvc.get("/api/v1/users/$aliceId") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isNotFound() }
@@ -311,11 +311,11 @@ class UserControllerIntegrationTest
     @Test
     fun `deleted user JWT is rejected with 401`()
     {
-        mockMvc.delete("/api/users/$aliceId") {
+        mockMvc.delete("/api/v1/users/$aliceId") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect { status { isNoContent() } }
 
-        mockMvc.get("/api/users/$aliceId") {
+        mockMvc.get("/api/v1/users/$aliceId") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isUnauthorized() }
@@ -323,15 +323,15 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `DELETE api-users-id returns 403 when user deletes another account`()
+    fun `DELETE api-v1-users-id returns 403 when user deletes another account`()
     {
-        val otherResult = mockMvc.post("/api/auth/register") {
+        val otherResult = mockMvc.post("/api/v1/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Bob", "bob@test.com", "bob123"))
         }.andReturn()
         val bobId = objectMapper.readTree(otherResult.response.contentAsString)["id"].asString()
 
-        mockMvc.delete("/api/users/$bobId") {
+        mockMvc.delete("/api/v1/users/$bobId") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isForbidden() }
@@ -339,11 +339,11 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-validate returns 200 and transitions status to ACTIVE`()
+    fun `POST api-v1-users-id-validate returns 200 and transitions status to ACTIVE`()
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
 
-        mockMvc.post("/api/users/$aliceId/validate") {
+        mockMvc.post("/api/v1/users/$aliceId/validate") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isOk() }
@@ -357,11 +357,11 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-validate records status history with closed CREATED entry and new ACTIVE entry`()
+    fun `POST api-v1-users-id-validate records status history with closed CREATED entry and new ACTIVE entry`()
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
 
-        mockMvc.post("/api/users/$aliceId/validate") {
+        mockMvc.post("/api/v1/users/$aliceId/validate") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isOk() }
@@ -386,15 +386,15 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-validate returns 403 when non-admin user validates another account`()
+    fun `POST api-v1-users-id-validate returns 403 when non-admin user validates another account`()
     {
-        val otherResult = mockMvc.post("/api/auth/register") {
+        val otherResult = mockMvc.post("/api/v1/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Bob", "bob@test.com", "bob123"))
         }.andReturn()
         val bobId = objectMapper.readTree(otherResult.response.contentAsString)["id"].asString()
 
-        mockMvc.post("/api/users/$bobId/validate") {
+        mockMvc.post("/api/v1/users/$bobId/validate") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isForbidden() }
@@ -402,14 +402,14 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-validate returns 409 when account is already active`()
+    fun `POST api-v1-users-id-validate returns 409 when account is already active`()
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
-        mockMvc.post("/api/users/$aliceId/validate") {
+        mockMvc.post("/api/v1/users/$aliceId/validate") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect { status { isOk() } }
 
-        mockMvc.post("/api/users/$aliceId/validate") {
+        mockMvc.post("/api/v1/users/$aliceId/validate") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isConflict() }
@@ -417,11 +417,11 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-validate returns 200 when admin validates a user`()
+    fun `POST api-v1-users-id-validate returns 200 when admin validates a user`()
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
 
-        mockMvc.post("/api/users/$aliceId/validate") {
+        mockMvc.post("/api/v1/users/$aliceId/validate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isOk() }
@@ -430,16 +430,16 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-deactivate returns 200 and transitions status to INACTIVE`()
+    fun `POST api-v1-users-id-deactivate returns 200 and transitions status to INACTIVE`()
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
-        mockMvc.post("/api/users/$aliceId/validate") {
+        mockMvc.post("/api/v1/users/$aliceId/validate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect { status { isOk() } }
 
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 4, 1, 9, 0), ZoneOffset.UTC))
 
-        mockMvc.post("/api/users/$aliceId/deactivate") {
+        mockMvc.post("/api/v1/users/$aliceId/deactivate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isOk() }
@@ -452,9 +452,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-deactivate returns 403 when called by a non-admin user`()
+    fun `POST api-v1-users-id-deactivate returns 403 when called by a non-admin user`()
     {
-        mockMvc.post("/api/users/$aliceId/deactivate") {
+        mockMvc.post("/api/v1/users/$aliceId/deactivate") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isForbidden() }
@@ -462,9 +462,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-deactivate returns 409 when account is not active`()
+    fun `POST api-v1-users-id-deactivate returns 409 when account is not active`()
     {
-        mockMvc.post("/api/users/$aliceId/deactivate") {
+        mockMvc.post("/api/v1/users/$aliceId/deactivate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isConflict() }
@@ -472,19 +472,19 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-reactivate returns 200 and transitions status back to ACTIVE`()
+    fun `POST api-v1-users-id-reactivate returns 200 and transitions status back to ACTIVE`()
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 3, 1, 12, 0), ZoneOffset.UTC))
-        mockMvc.post("/api/users/$aliceId/validate") {
+        mockMvc.post("/api/v1/users/$aliceId/validate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect { status { isOk() } }
-        mockMvc.post("/api/users/$aliceId/deactivate") {
+        mockMvc.post("/api/v1/users/$aliceId/deactivate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect { status { isOk() } }
 
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 5, 1, 8, 0), ZoneOffset.UTC))
 
-        mockMvc.post("/api/users/$aliceId/reactivate") {
+        mockMvc.post("/api/v1/users/$aliceId/reactivate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isOk() }
@@ -497,9 +497,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-reactivate returns 403 when called by a non-admin user`()
+    fun `POST api-v1-users-id-reactivate returns 403 when called by a non-admin user`()
     {
-        mockMvc.post("/api/users/$aliceId/reactivate") {
+        mockMvc.post("/api/v1/users/$aliceId/reactivate") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isForbidden() }
@@ -507,9 +507,9 @@ class UserControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-users-id-reactivate returns 409 when account is not inactive`()
+    fun `POST api-v1-users-id-reactivate returns 409 when account is not inactive`()
     {
-        mockMvc.post("/api/users/$aliceId/reactivate") {
+        mockMvc.post("/api/v1/users/$aliceId/reactivate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isConflict() }
@@ -525,17 +525,17 @@ class UserControllerIntegrationTest
         val reactivationTime = OffsetDateTime.of(LocalDateTime.of(2026, 5, 1, 8, 0), ZoneOffset.UTC)
 
         timeProvider.setNow(validationTime)
-        mockMvc.post("/api/users/$aliceId/validate") {
+        mockMvc.post("/api/v1/users/$aliceId/validate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect { status { isOk() } }
 
         timeProvider.setNow(deactivationTime)
-        mockMvc.post("/api/users/$aliceId/deactivate") {
+        mockMvc.post("/api/v1/users/$aliceId/deactivate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect { status { isOk() } }
 
         timeProvider.setNow(reactivationTime)
-        mockMvc.post("/api/users/$aliceId/reactivate") {
+        mockMvc.post("/api/v1/users/$aliceId/reactivate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect { status { isOk() } }
 

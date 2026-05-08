@@ -72,11 +72,11 @@ class AuthControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-auth-register creates a user and returns 201`()
+    fun `POST api-v1-auth-register creates a user and returns 201`()
     {
         timeProvider.setNow(OffsetDateTime.of(LocalDateTime.of(2026, 1, 2, 11, 30, 45), ZoneOffset.UTC))
 
-        mockMvc.post("/api/auth/register") {
+        mockMvc.post("/api/v1/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Alice", "alice@example.com", "password"))
         }.andExpect {
@@ -91,14 +91,14 @@ class AuthControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-auth-register returns 409 when email is already taken`()
+    fun `POST api-v1-auth-register returns 409 when email is already taken`()
     {
-        mockMvc.post("/api/auth/register") {
+        mockMvc.post("/api/v1/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Alice", "alice@example.com", "password"))
         }.andExpect { status { isCreated() } }
 
-        mockMvc.post("/api/auth/register") {
+        mockMvc.post("/api/v1/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Alice2", "alice@example.com", "other"))
         }.andExpect {
@@ -107,7 +107,7 @@ class AuthControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-auth-login returns 200 with a valid token`()
+    fun `POST api-v1-auth-login returns 200 with a valid token`()
     {
         val savedUser = userJpaRepository.save(
             UserEntity(
@@ -123,7 +123,7 @@ class AuthControllerIntegrationTest
             UserStatusHistoryEntity(id = UUID.randomUUID(), user = savedUser, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
 
-        val result = mockMvc.post("/api/auth/login") {
+        val result = mockMvc.post("/api/v1/auth/login") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(LoginRequest("alice@example.com", "password"))
         }.andExpect {
@@ -136,7 +136,7 @@ class AuthControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-auth-login returns 401 when password is wrong`()
+    fun `POST api-v1-auth-login returns 401 when password is wrong`()
     {
         val savedUser = userJpaRepository.save(
             UserEntity(
@@ -152,7 +152,7 @@ class AuthControllerIntegrationTest
             UserStatusHistoryEntity(id = UUID.randomUUID(), user = savedUser, status = "CREATED", since = OffsetDateTime.now(), until = null, reason = null)
         )
 
-        mockMvc.post("/api/auth/login") {
+        mockMvc.post("/api/v1/auth/login") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(LoginRequest("alice@example.com", "wrong"))
         }.andExpect {
@@ -161,9 +161,9 @@ class AuthControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-auth-login returns 401 when email is unknown`()
+    fun `POST api-v1-auth-login returns 401 when email is unknown`()
     {
-        mockMvc.post("/api/auth/login") {
+        mockMvc.post("/api/v1/auth/login") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(LoginRequest("unknown@example.com", "password"))
         }.andExpect {

@@ -84,14 +84,14 @@ class BookingControllerIntegrationTest
         )
         adminToken = loginAndGetToken("admin@test.com", "admin123")
 
-        val aliceResult = mockMvc.post("/api/auth/register") {
+        val aliceResult = mockMvc.post("/api/v1/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Alice", "alice@test.com", "alice123"))
         }.andReturn()
         aliceId = UUID.fromString(objectMapper.readTree(aliceResult.response.contentAsString)["id"].asString())
         aliceToken = loginAndGetToken("alice@test.com", "alice123")
 
-        val bobResult = mockMvc.post("/api/auth/register") {
+        val bobResult = mockMvc.post("/api/v1/auth/register") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(RegisterRequest("Bob", "bob@test.com", "bob123"))
         }.andReturn()
@@ -101,7 +101,7 @@ class BookingControllerIntegrationTest
 
     private fun loginAndGetToken(email: String, password: String): String
     {
-        val result = mockMvc.post("/api/auth/login") {
+        val result = mockMvc.post("/api/v1/auth/login") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(LoginRequest(email, password))
         }.andReturn()
@@ -110,7 +110,7 @@ class BookingControllerIntegrationTest
 
     private fun createRoom(name: String = "Conference Room", capacity: Int = 10, requiresValidation: Boolean = false): UUID
     {
-        val result = mockMvc.post("/api/rooms") {
+        val result = mockMvc.post("/api/v1/rooms") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CreateRoomRequest(name, capacity, requiresValidation))
             header("Authorization", "Bearer $adminToken")
@@ -119,7 +119,7 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `POST then GET api-bookings returns the created booking`()
+    fun `POST then GET api-v1-bookings returns the created booking`()
     {
         val roomId = createRoom()
         val request = CreateBookingRequest(
@@ -131,7 +131,7 @@ class BookingControllerIntegrationTest
             "Projector needed"
         )
 
-        val postResult = mockMvc.post("/api/bookings") {
+        val postResult = mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             header("Authorization", "Bearer $aliceToken")
@@ -144,7 +144,7 @@ class BookingControllerIntegrationTest
 
         val createdId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.get("/api/bookings/$createdId") {
+        mockMvc.get("/api/v1/bookings/$createdId") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isOk() }
@@ -156,7 +156,7 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-bookings returns 404 when room does not exist`()
+    fun `POST api-v1-bookings returns 404 when room does not exist`()
     {
         val request = CreateBookingRequest(
             UUID.randomUUID(),
@@ -167,7 +167,7 @@ class BookingControllerIntegrationTest
             null
         )
 
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             header("Authorization", "Bearer $aliceToken")
@@ -177,13 +177,13 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-bookings returns 400 when capacity is exceeded`()
+    fun `POST api-v1-bookings returns 400 when capacity is exceeded`()
     {
         val roomId = createRoom(capacity = 5)
         val request =
             CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 3), 10, null)
 
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             header("Authorization", "Bearer $aliceToken")
@@ -193,12 +193,12 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-bookings returns 409 when dates overlap for the same room`()
+    fun `POST api-v1-bookings returns 409 when dates overlap for the same room`()
     {
         val roomId = createRoom()
         val request = CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 5), 5, null)
 
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             header("Authorization", "Bearer $aliceToken")
@@ -206,7 +206,7 @@ class BookingControllerIntegrationTest
 
         val overlapping =
             CreateBookingRequest(roomId, bobId, LocalDate.of(2026, 6, 3), LocalDate.of(2026, 6, 7), 5, null)
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(overlapping)
             header("Authorization", "Bearer $bobToken")
@@ -221,14 +221,14 @@ class BookingControllerIntegrationTest
         val roomId = createRoom()
         val request = CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 5), 5, null)
 
-        val postResult = mockMvc.post("/api/bookings") {
+        val postResult = mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             header("Authorization", "Bearer $aliceToken")
         }.andReturn()
         val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.post("/api/bookings/$bookingId/cancel") {
+        mockMvc.post("/api/v1/bookings/$bookingId/cancel") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CancelBookingRequest("No longer needed"))
             header("Authorization", "Bearer $aliceToken")
@@ -241,7 +241,7 @@ class BookingControllerIntegrationTest
 
         val overlapping =
             CreateBookingRequest(roomId, bobId, LocalDate.of(2026, 6, 3), LocalDate.of(2026, 6, 7), 5, null)
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(overlapping)
             header("Authorization", "Bearer $bobToken")
@@ -251,10 +251,10 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-bookings-id-cancel returns 403 when user cancels another user booking`()
+    fun `POST api-v1-bookings-id-cancel returns 403 when user cancels another user booking`()
     {
         val roomId = createRoom()
-        val postResult = mockMvc.post("/api/bookings") {
+        val postResult = mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 3), 5, null)
@@ -263,7 +263,7 @@ class BookingControllerIntegrationTest
         }.andReturn()
         val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.post("/api/bookings/$bookingId/cancel") {
+        mockMvc.post("/api/v1/bookings/$bookingId/cancel") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CancelBookingRequest(null))
             header("Authorization", "Bearer $bobToken")
@@ -273,10 +273,10 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-bookings-id returns 403 when user accesses another user booking`()
+    fun `GET api-v1-bookings-id returns 403 when user accesses another user booking`()
     {
         val roomId = createRoom()
-        val postResult = mockMvc.post("/api/bookings") {
+        val postResult = mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 8, 1), LocalDate.of(2026, 8, 3), 5, null)
@@ -285,7 +285,7 @@ class BookingControllerIntegrationTest
         }.andReturn()
         val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.get("/api/bookings/$bookingId") {
+        mockMvc.get("/api/v1/bookings/$bookingId") {
             header("Authorization", "Bearer $bobToken")
         }.andExpect {
             status { isForbidden() }
@@ -293,9 +293,9 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-bookings-id returns 404 for unknown booking id`()
+    fun `GET api-v1-bookings-id returns 404 for unknown booking id`()
     {
-        mockMvc.get("/api/bookings/${UUID.randomUUID()}") {
+        mockMvc.get("/api/v1/bookings/${UUID.randomUUID()}") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isNotFound() }
@@ -303,19 +303,19 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-bookings returns 403 when user account is inactive`()
+    fun `POST api-v1-bookings returns 403 when user account is inactive`()
     {
-        mockMvc.post("/api/users/$aliceId/validate") {
+        mockMvc.post("/api/v1/users/$aliceId/validate") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect { status { isOk() } }
-        mockMvc.post("/api/users/$aliceId/deactivate") {
+        mockMvc.post("/api/v1/users/$aliceId/deactivate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect { status { isOk() } }
 
         val roomId = createRoom()
         val request = CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 3), 5, null)
 
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             header("Authorization", "Bearer $aliceToken")
@@ -325,10 +325,10 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-bookings-id-history returns CONFIRMED entry after creation`()
+    fun `GET api-v1-bookings-id-history returns CONFIRMED entry after creation`()
     {
         val roomId = createRoom()
-        val postResult = mockMvc.post("/api/bookings") {
+        val postResult = mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 3), 5, null)
@@ -337,7 +337,7 @@ class BookingControllerIntegrationTest
         }.andReturn()
         val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.get("/api/bookings/$bookingId/history") {
+        mockMvc.get("/api/v1/bookings/$bookingId/history") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isOk() }
@@ -349,10 +349,10 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-bookings-id-history returns CONFIRMED then CANCELLED after cancellation`()
+    fun `GET api-v1-bookings-id-history returns CONFIRMED then CANCELLED after cancellation`()
     {
         val roomId = createRoom()
-        val postResult = mockMvc.post("/api/bookings") {
+        val postResult = mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 3), 5, null)
@@ -361,13 +361,13 @@ class BookingControllerIntegrationTest
         }.andReturn()
         val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.post("/api/bookings/$bookingId/cancel") {
+        mockMvc.post("/api/v1/bookings/$bookingId/cancel") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(CancelBookingRequest("No longer needed"))
             header("Authorization", "Bearer $aliceToken")
         }.andExpect { status { isOk() } }
 
-        mockMvc.get("/api/bookings/$bookingId/history") {
+        mockMvc.get("/api/v1/bookings/$bookingId/history") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isOk() }
@@ -380,10 +380,10 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `GET api-bookings-my returns only the authenticated user bookings`()
+    fun `GET api-v1-bookings-my returns only the authenticated user bookings`()
     {
         val roomId = createRoom()
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 3), 5, null)
@@ -391,7 +391,7 @@ class BookingControllerIntegrationTest
             header("Authorization", "Bearer $aliceToken")
         }.andExpect { status { isCreated() } }
 
-        mockMvc.get("/api/bookings/my") {
+        mockMvc.get("/api/v1/bookings/my") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isOk() }
@@ -399,7 +399,7 @@ class BookingControllerIntegrationTest
             jsonPath("$[0].user_id") { value(aliceId.toString()) }
         }
 
-        mockMvc.get("/api/bookings/my") {
+        mockMvc.get("/api/v1/bookings/my") {
             header("Authorization", "Bearer $bobToken")
         }.andExpect {
             status { isOk() }
@@ -408,12 +408,12 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-bookings returns PENDING when room requires validation`()
+    fun `POST api-v1-bookings returns PENDING when room requires validation`()
     {
         val roomId = createRoom(requiresValidation = true)
         val request = CreateBookingRequest(roomId, aliceId, LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 3), 5, null)
 
-        mockMvc.post("/api/bookings") {
+        mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(request)
             header("Authorization", "Bearer $aliceToken")
@@ -424,10 +424,10 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-bookings-id-validate returns 200 and CONFIRMED booking`()
+    fun `POST api-v1-bookings-id-validate returns 200 and CONFIRMED booking`()
     {
         val roomId = createRoom(requiresValidation = true)
-        val postResult = mockMvc.post("/api/bookings") {
+        val postResult = mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 CreateBookingRequest(roomId, aliceId, LocalDate.of(2027, 1, 1), LocalDate.of(2027, 1, 3), 5, null)
@@ -436,7 +436,7 @@ class BookingControllerIntegrationTest
         }.andReturn()
         val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.post("/api/bookings/$bookingId/validate") {
+        mockMvc.post("/api/v1/bookings/$bookingId/validate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isOk() }
@@ -446,10 +446,10 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-bookings-id-validate cancels overlapping PENDING bookings`()
+    fun `POST api-v1-bookings-id-validate cancels overlapping PENDING bookings`()
     {
         val roomId = createRoom(requiresValidation = true)
-        val aliceResult = mockMvc.post("/api/bookings") {
+        val aliceResult = mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 CreateBookingRequest(roomId, aliceId, LocalDate.of(2027, 2, 1), LocalDate.of(2027, 2, 5), 5, null)
@@ -458,7 +458,7 @@ class BookingControllerIntegrationTest
         }.andReturn()
         val aliceBookingId = objectMapper.readTree(aliceResult.response.contentAsString)["id"].asString()
 
-        val bobResult = mockMvc.post("/api/bookings") {
+        val bobResult = mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 CreateBookingRequest(roomId, bobId, LocalDate.of(2027, 2, 3), LocalDate.of(2027, 2, 7), 5, null)
@@ -467,11 +467,11 @@ class BookingControllerIntegrationTest
         }.andReturn()
         val bobBookingId = objectMapper.readTree(bobResult.response.contentAsString)["id"].asString()
 
-        mockMvc.post("/api/bookings/$aliceBookingId/validate") {
+        mockMvc.post("/api/v1/bookings/$aliceBookingId/validate") {
             header("Authorization", "Bearer $adminToken")
         }.andExpect { status { isOk() } }
 
-        mockMvc.get("/api/bookings/$bobBookingId") {
+        mockMvc.get("/api/v1/bookings/$bobBookingId") {
             header("Authorization", "Bearer $bobToken")
         }.andExpect {
             status { isOk() }
@@ -480,10 +480,10 @@ class BookingControllerIntegrationTest
     }
 
     @Test
-    fun `POST api-bookings-id-validate returns 403 for non-admin`()
+    fun `POST api-v1-bookings-id-validate returns 403 for non-admin`()
     {
         val roomId = createRoom(requiresValidation = true)
-        val postResult = mockMvc.post("/api/bookings") {
+        val postResult = mockMvc.post("/api/v1/bookings") {
             contentType = MediaType.APPLICATION_JSON
             content = objectMapper.writeValueAsString(
                 CreateBookingRequest(roomId, aliceId, LocalDate.of(2027, 3, 1), LocalDate.of(2027, 3, 3), 5, null)
@@ -492,7 +492,7 @@ class BookingControllerIntegrationTest
         }.andReturn()
         val bookingId = objectMapper.readTree(postResult.response.contentAsString)["id"].asString()
 
-        mockMvc.post("/api/bookings/$bookingId/validate") {
+        mockMvc.post("/api/v1/bookings/$bookingId/validate") {
             header("Authorization", "Bearer $aliceToken")
         }.andExpect {
             status { isForbidden() }

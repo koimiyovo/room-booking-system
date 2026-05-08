@@ -1,6 +1,7 @@
 package com.kyovo.infrastructure.api.security
 
 import com.kyovo.domain.model.user.UserRole
+import com.kyovo.infrastructure.api.API_V1
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
@@ -24,19 +25,19 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/auth/logout").authenticated()
+                    .requestMatchers(HttpMethod.POST, "$API_V1/auth/register", "$API_V1/auth/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "$API_V1/auth/logout").authenticated()
                     .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/users", "/api/users/**").hasRole(UserRole.ADMIN.label)
-                    .requestMatchers(HttpMethod.PUT, "/api/users/**").authenticated()
-                    .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/rooms").hasRole(UserRole.ADMIN.label)
-                    .requestMatchers(HttpMethod.GET, "/api/rooms", "/api/rooms/**").authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/bookings").hasRole(UserRole.ADMIN.label)
-                    .requestMatchers(HttpMethod.GET, "/api/bookings/**").authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/bookings").authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/bookings/*/validate").hasRole(UserRole.ADMIN.label)
-                    .requestMatchers(HttpMethod.POST, "/api/bookings/**").authenticated()
+                    .requestMatchers(HttpMethod.GET, "$API_V1/users", "$API_V1/users/**").hasRole(UserRole.ADMIN.label)
+                    .requestMatchers(HttpMethod.PUT, "$API_V1/users/**").authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "$API_V1/users/**").authenticated()
+                    .requestMatchers(HttpMethod.POST, "$API_V1/rooms").hasRole(UserRole.ADMIN.label)
+                    .requestMatchers(HttpMethod.GET, "$API_V1/rooms", "$API_V1/rooms/**").authenticated()
+                    .requestMatchers(HttpMethod.GET, "$API_V1/bookings").hasRole(UserRole.ADMIN.label)
+                    .requestMatchers(HttpMethod.GET, "$API_V1/bookings/**").authenticated()
+                    .requestMatchers(HttpMethod.POST, "$API_V1/bookings").authenticated()
+                    .requestMatchers(HttpMethod.POST, "$API_V1/bookings/*/validate").hasRole(UserRole.ADMIN.label)
+                    .requestMatchers(HttpMethod.POST, "$API_V1/bookings/**").authenticated()
                     .anyRequest().authenticated()
             }
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter::class.java)
