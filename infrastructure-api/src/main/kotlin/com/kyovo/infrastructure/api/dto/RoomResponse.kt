@@ -6,7 +6,8 @@ import java.util.*
 data class RoomResponse(
     val id: UUID,
     val name: String,
-    val capacity: Int
+    val capacity: Int,
+    val requiresValidation: Boolean
 )
 {
     companion object
@@ -16,7 +17,8 @@ data class RoomResponse(
             return RoomResponse(
                 id = room.id.value,
                 name = room.name.value,
-                capacity = room.capacity.value
+                capacity = room.capacity.value,
+                requiresValidation = room.requiresValidation
             )
         }
     }

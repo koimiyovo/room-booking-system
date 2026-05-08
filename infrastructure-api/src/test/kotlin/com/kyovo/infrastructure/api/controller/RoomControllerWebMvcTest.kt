@@ -41,7 +41,7 @@ class RoomControllerWebMvcTest
     private lateinit var jwtService: JwtService
 
     private val roomId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-    private val room = Room(RoomId(roomId), RoomName("Salle A"), RoomCapacity(10))
+    private val room = Room(RoomId(roomId), RoomName("Salle A"), RoomCapacity(10), false)
 
     @Test
     fun `GET api-rooms returns 200 with the list of rooms`()
@@ -98,8 +98,8 @@ class RoomControllerWebMvcTest
     @Test
     fun `POST api-rooms returns 201 with the created room`()
     {
-        val request = CreateRoomRequest("Salle B", 20)
-        val createdRoom = Room(RoomId(roomId), RoomName("Salle B"), RoomCapacity(20))
+        val request = CreateRoomRequest("Salle B", 20, false)
+        val createdRoom = Room(RoomId(roomId), RoomName("Salle B"), RoomCapacity(20), false)
         whenever(roomUseCase.save(any())).thenReturn(createdRoom)
 
         mockMvc.post("/api/rooms") {
@@ -117,9 +117,9 @@ class RoomControllerWebMvcTest
     @Test
     fun `POST api-rooms calls the use case with the request body values`()
     {
-        val request = CreateRoomRequest("Salle C", 30)
+        val request = CreateRoomRequest("Salle C", 30, false)
         whenever(roomUseCase.save(any())).thenReturn(
-            Room(RoomId(roomId), RoomName("Salle C"), RoomCapacity(30))
+            Room(RoomId(roomId), RoomName("Salle C"), RoomCapacity(30), false)
         )
 
         mockMvc.post("/api/rooms") {
@@ -130,6 +130,6 @@ class RoomControllerWebMvcTest
             status { isCreated() }
         }
 
-        verify(roomUseCase).save(NewRoom(RoomName("Salle C"), RoomCapacity(30)))
+        verify(roomUseCase).save(NewRoom(RoomName("Salle C"), RoomCapacity(30), false))
     }
 }

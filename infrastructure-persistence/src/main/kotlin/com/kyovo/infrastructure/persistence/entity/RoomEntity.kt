@@ -20,7 +20,10 @@ class RoomEntity(
     val name: String,
 
     @Column(nullable = false)
-    val capacity: Int
+    val capacity: Int,
+
+    @Column(name = "requires_validation", nullable = false)
+    val requiresValidation: Boolean
 )
 {
     companion object
@@ -30,7 +33,8 @@ class RoomEntity(
             return RoomEntity(
                 id = room.id.value,
                 name = room.name.value,
-                capacity = room.capacity.value
+                capacity = room.capacity.value,
+                requiresValidation = room.requiresValidation
             )
         }
     }
@@ -40,7 +44,8 @@ class RoomEntity(
         return Room(
             id = RoomId(id),
             name = RoomName(name),
-            capacity = RoomCapacity(capacity)
+            capacity = RoomCapacity(capacity),
+            requiresValidation = requiresValidation
         )
     }
 }

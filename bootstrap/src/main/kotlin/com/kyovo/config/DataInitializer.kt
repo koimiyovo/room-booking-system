@@ -22,9 +22,9 @@ class DataInitializer(
 {
     override fun run(args: ApplicationArguments)
     {
-        val boardRoom = roomUseCase.save(NewRoom(RoomName("Board Room"), RoomCapacity(20)))
-        val trainingRoom = roomUseCase.save(NewRoom(RoomName("Training Room"), RoomCapacity(30)))
-        roomUseCase.save(NewRoom(RoomName("Focus Room"), RoomCapacity(4)))
+        val boardRoom = roomUseCase.save(NewRoom(RoomName("Board Room"), RoomCapacity(20), false))
+        val trainingRoom = roomUseCase.save(NewRoom(RoomName("Training Room"), RoomCapacity(30), false))
+        roomUseCase.save(NewRoom(RoomName("Focus Room"), RoomCapacity(4), false))
 
         authUseCase.register(
             NewUser(

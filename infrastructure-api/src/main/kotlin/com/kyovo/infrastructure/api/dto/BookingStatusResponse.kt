@@ -4,6 +4,7 @@ import com.kyovo.domain.model.booking.BookingStatus
 
 enum class BookingStatusResponse
 {
+    PENDING,
     CONFIRMED,
     CANCELED;
 
@@ -13,6 +14,7 @@ enum class BookingStatusResponse
         {
             return when (status)
             {
+                BookingStatus.PENDING -> PENDING
                 BookingStatus.CONFIRMED -> CONFIRMED
                 BookingStatus.CANCELED -> CANCELED
             }

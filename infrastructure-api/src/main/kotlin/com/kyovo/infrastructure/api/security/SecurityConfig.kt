@@ -35,6 +35,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
                     .requestMatchers(HttpMethod.GET, "/api/bookings").hasRole(UserRole.ADMIN.label)
                     .requestMatchers(HttpMethod.GET, "/api/bookings/**").authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/bookings").authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/bookings/*/validate").hasRole(UserRole.ADMIN.label)
                     .requestMatchers(HttpMethod.POST, "/api/bookings/**").authenticated()
                     .anyRequest().authenticated()
             }

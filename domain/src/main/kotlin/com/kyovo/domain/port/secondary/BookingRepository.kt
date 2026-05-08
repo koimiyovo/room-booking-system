@@ -27,4 +27,11 @@ interface BookingRepository
     )
 
     fun findStatusHistory(bookingId: BookingId): List<BookingStatusHistory>
+
+    fun findOverlappingPendingBookings(
+        roomId: RoomId,
+        startDate: BookingStartDate,
+        endDate: BookingEndDate,
+        excludeBookingId: BookingId
+    ): List<Booking>
 }

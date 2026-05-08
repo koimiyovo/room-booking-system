@@ -3,5 +3,6 @@ package com.kyovo.domain.model.room
 data class Room(
     val id: RoomId,
     val name: RoomName,
-    val capacity: RoomCapacity
+    val capacity: RoomCapacity,
+    val requiresValidation: Boolean
 )

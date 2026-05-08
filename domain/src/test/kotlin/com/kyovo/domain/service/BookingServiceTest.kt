@@ -35,7 +35,8 @@ class BookingServiceTest
 
     private val roomId = RoomId(UUID.randomUUID())
     private val userId = UserId(UUID.randomUUID())
-    private val room = Room(roomId, RoomName("Conference Room"), RoomCapacity(10))
+    private val room = Room(roomId, RoomName("Conference Room"), RoomCapacity(10), requiresValidation = false)
+    private val roomWithValidation = Room(roomId, RoomName("Board Room"), RoomCapacity(10), requiresValidation = true)
     private val startDate = BookingStartDate(LocalDate.of(2026, 6, 1))
     private val endDate = BookingEndDate(LocalDate.of(2026, 6, 3))
     private val newBooking = NewBooking(roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)
@@ -61,6 +62,12 @@ class BookingServiceTest
         Booking(
             id, roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null,
             BookingStatusInfo(BookingStatus.CONFIRMED, BookingStatusInfoDate(now), changedBy = null, reason = null)
+        )
+
+    private fun pendingBooking(id: BookingId = BookingId(UUID.randomUUID())): Booking =
+        Booking(
+            id, roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null,
+            BookingStatusInfo(BookingStatus.PENDING, BookingStatusInfoDate(now), changedBy = null, reason = null)
         )
 
     private fun cancelledBooking(id: BookingId = BookingId(UUID.randomUUID()), cancelledBy: UserId = userId): Booking =
@@ -328,5 +335,95 @@ class BookingServiceTest
         val result = bookingService.findById(bookingId)
 
         assertThat(result).isNull()
+    }
+
+    @Test
+    fun `create returns PENDING booking when room requiresValidation is true`()
+    {
+        whenever(clockPort.now()).thenReturn(now)
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
+        whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(roomWithValidation)
+        whenever(bookingRepository.existsOverlappingBooking(roomId, startDate, endDate)).thenReturn(false)
+        whenever(bookingRepository.save(any())).thenAnswer { it.getArgument<Booking>(0) }
+
+        val result = bookingService.create(newBooking)
+
+        assertThat(result.status).isEqualTo(BookingStatus.PENDING)
+        assertThat(result.statusInfo.changedBy).isNull()
+    }
+
+    @Test
+    fun `validate transitions PENDING to CONFIRMED and records admin id`()
+    {
+        whenever(clockPort.now()).thenReturn(now)
+        val adminId = UserId(UUID.randomUUID())
+        val bookingId = BookingId(UUID.randomUUID())
+        val booking = pendingBooking(bookingId)
+        whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
+        whenever(bookingRepository.update(any())).thenAnswer { it.getArgument<Booking>(0) }
+        whenever(bookingRepository.findOverlappingPendingBookings(roomId, startDate, endDate, bookingId)).thenReturn(emptyList())
+
+        val result = bookingService.validate(bookingId, adminId)
+
+        assertThat(result.status).isEqualTo(BookingStatus.CONFIRMED)
+        assertThat(result.statusInfo.changedBy).isEqualTo(adminId)
+        assertThat(result.statusInfo.since.value).isEqualTo(now)
+    }
+
+    @Test
+    fun `validate throws BookingNotFoundException when booking does not exist`()
+    {
+        val bookingId = BookingId(UUID.randomUUID())
+        whenever(bookingRepository.findById(bookingId)).thenReturn(null)
+
+        assertThatThrownBy { bookingService.validate(bookingId, userId) }
+            .isInstanceOf(BookingNotFoundException::class.java)
+    }
+
+    @Test
+    fun `validate throws BookingNotPendingException when booking is already confirmed`()
+    {
+        val bookingId = BookingId(UUID.randomUUID())
+        val booking = confirmedBooking(bookingId)
+        whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
+
+        assertThatThrownBy { bookingService.validate(bookingId, userId) }
+            .isInstanceOf(BookingNotPendingException::class.java)
+    }
+
+    @Test
+    fun `validate throws BookingNotPendingException when booking is cancelled`()
+    {
+        val bookingId = BookingId(UUID.randomUUID())
+        val booking = cancelledBooking(bookingId)
+        whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
+
+        assertThatThrownBy { bookingService.validate(bookingId, userId) }
+            .isInstanceOf(BookingNotPendingException::class.java)
+    }
+
+    @Test
+    fun `validate cancels overlapping PENDING bookings with system reason`()
+    {
+        whenever(clockPort.now()).thenReturn(now)
+        val adminId = UserId(UUID.randomUUID())
+        val bookingId = BookingId(UUID.randomUUID())
+        val booking = pendingBooking(bookingId)
+        val conflictingId = BookingId(UUID.randomUUID())
+        val conflicting = pendingBooking(conflictingId)
+        whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
+        whenever(bookingRepository.update(any())).thenAnswer { it.getArgument<Booking>(0) }
+        whenever(bookingRepository.findOverlappingPendingBookings(roomId, startDate, endDate, bookingId))
+            .thenReturn(listOf(conflicting))
+
+        bookingService.validate(bookingId, adminId)
+
+        org.mockito.kotlin.verify(bookingRepository).saveStatusHistory(
+            org.mockito.kotlin.eq(conflictingId),
+            org.mockito.kotlin.eq(BookingStatus.CANCELED),
+            any(),
+            org.mockito.kotlin.isNull(),
+            any()
+        )
     }
 }

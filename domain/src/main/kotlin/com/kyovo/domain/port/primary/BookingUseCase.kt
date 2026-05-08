@@ -16,4 +16,6 @@ interface BookingUseCase
     fun cancel(bookingId: BookingId, cancelledBy: UserId, isAdmin: Boolean, reason: BookingStatusReason?): Booking
 
     fun findStatusHistory(bookingId: BookingId): List<BookingStatusHistory>
+
+    fun validate(bookingId: BookingId, adminId: UserId): Booking
 }

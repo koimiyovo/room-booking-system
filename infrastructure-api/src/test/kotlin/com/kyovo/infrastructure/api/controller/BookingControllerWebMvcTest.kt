@@ -2,6 +2,7 @@ package com.kyovo.infrastructure.api.controller
 
 import com.kyovo.domain.exception.BookingAlreadyCancelledException
 import com.kyovo.domain.exception.BookingConflictException
+import com.kyovo.domain.exception.BookingNotPendingException
 import com.kyovo.domain.exception.RoomCapacityExceededException
 import com.kyovo.domain.exception.RoomNotFoundException
 import com.kyovo.domain.model.booking.*
@@ -294,5 +295,52 @@ class BookingControllerWebMvcTest
             .andExpect {
                 status { isNotFound() }
             }
+    }
+
+    @Test
+    @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["ADMIN"])
+    fun `POST api-bookings-id-validate returns 200 with CONFIRMED booking`()
+    {
+        val confirmedBooking = booking.copy(
+            statusInfo = BookingStatusInfo(
+                status = BookingStatus.CONFIRMED,
+                since = BookingStatusInfoDate(now),
+                changedBy = UserId(userId),
+                reason = null
+            )
+        )
+        whenever(bookingUseCase.validate(any(), any())).thenReturn(confirmedBooking)
+
+        mockMvc.post("/api/bookings/$bookingId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.status") { value("CONFIRMED") }
+            jsonPath("$.status_info.changed_by") { value(userId.toString()) }
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["ADMIN"])
+    fun `POST api-bookings-id-validate returns 409 when booking is not pending`()
+    {
+        whenever(bookingUseCase.validate(any(), any())).thenThrow(BookingNotPendingException(BookingId(bookingId)))
+
+        mockMvc.post("/api/bookings/$bookingId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isConflict() }
+        }
+    }
+
+    @Test
+    @WithMockUser(username = "770e8400-e29b-41d4-a716-446655440002", roles = ["USER"])
+    fun `POST api-bookings-id-validate returns 403 for non-admin user`()
+    {
+        mockMvc.post("/api/bookings/$bookingId/validate") {
+            with(csrf())
+        }.andExpect {
+            status { isForbidden() }
+        }
     }
 }

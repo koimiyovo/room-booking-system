@@ -45,16 +45,10 @@ class BookingService(
                 throw BookingConflictException(newBooking.roomId, newBooking.startDate, newBooking.endDate)
 
             val now = clockPort.now()
-            val statusInfo =
-                BookingStatusInfo(BookingStatus.CONFIRMED, BookingStatusInfoDate(now), changedBy = null, reason = null)
+            val initialStatus = if (room.requiresValidation) BookingStatus.PENDING else BookingStatus.CONFIRMED
+            val statusInfo = BookingStatusInfo(initialStatus, BookingStatusInfoDate(now), changedBy = null, reason = null)
             val booking = bookingRepository.save(newBooking.toBooking(statusInfo))
-            bookingRepository.saveStatusHistory(
-                booking.id,
-                BookingStatus.CONFIRMED,
-                BookingStatusHistoryDate(now),
-                newBooking.userId,
-                null
-            )
+            bookingRepository.saveStatusHistory(booking.id, initialStatus, BookingStatusHistoryDate(now), newBooking.userId, null)
             booking
         }
     }
@@ -89,5 +83,28 @@ class BookingService(
     {
         bookingRepository.findById(bookingId) ?: throw BookingNotFoundException(bookingId)
         return bookingRepository.findStatusHistory(bookingId)
+    }
+
+    override fun validate(bookingId: BookingId, adminId: UserId): Booking
+    {
+        return transactionPort.executeInTransaction {
+            val booking = bookingRepository.findById(bookingId) ?: throw BookingNotFoundException(bookingId)
+            if (booking.status != BookingStatus.PENDING) throw BookingNotPendingException(bookingId)
+            val now = clockPort.now()
+            val confirmed = booking.transitionTo(BookingStatus.CONFIRMED, BookingStatusInfoDate(now), adminId, null)
+                ?: throw BookingNotPendingException(bookingId)
+            val saved = bookingRepository.update(confirmed)
+            bookingRepository.saveStatusHistory(saved.id, BookingStatus.CONFIRMED, BookingStatusHistoryDate(now), adminId, null)
+
+            val systemReason = BookingStatusReason("System cancellation: another booking was accepted for this period")
+            bookingRepository.findOverlappingPendingBookings(booking.roomId, booking.startDate, booking.endDate, bookingId)
+                .forEach { pending ->
+                    val cancelled = pending.transitionTo(BookingStatus.CANCELED, BookingStatusInfoDate(now), null, systemReason)
+                        ?: return@forEach
+                    bookingRepository.update(cancelled)
+                    bookingRepository.saveStatusHistory(cancelled.id, BookingStatus.CANCELED, BookingStatusHistoryDate(now), null, systemReason)
+                }
+            saved
+        }
     }
 }

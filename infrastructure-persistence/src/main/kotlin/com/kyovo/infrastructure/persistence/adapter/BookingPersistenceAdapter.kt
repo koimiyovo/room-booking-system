@@ -89,4 +89,15 @@ class BookingPersistenceAdapter(
     {
         return statusHistoryJpaRepository.findAllByBookingId(bookingId.value).map { it.toDomain() }
     }
+
+    override fun findOverlappingPendingBookings(
+        roomId: RoomId,
+        startDate: BookingStartDate,
+        endDate: BookingEndDate,
+        excludeBookingId: BookingId
+    ): List<Booking>
+    {
+        return jpaRepository.findOverlappingPending(roomId.value, startDate.value, endDate.value, excludeBookingId.value)
+            .map { it.toDomain() }
+    }
 }

@@ -16,7 +16,7 @@ class RoomServiceTest
     @Test
     fun `findAll returns all rooms from the repository`()
     {
-        val rooms = listOf(Room(RoomId(UUID.randomUUID()), RoomName("Salle A"), RoomCapacity(10)))
+        val rooms = listOf(Room(RoomId(UUID.randomUUID()), RoomName("Salle A"), RoomCapacity(10), false))
         whenever(roomRepository.findAll()).thenReturn(rooms)
 
         val result = roomService.findAll()
@@ -38,7 +38,7 @@ class RoomServiceTest
     fun `findById returns the room when it exists`()
     {
         val id = RoomId(UUID.randomUUID())
-        val room = Room(id, RoomName("Salle B"), RoomCapacity(5))
+        val room = Room(id, RoomName("Salle B"), RoomCapacity(5), false)
         whenever(roomRepository.findById(id)).thenReturn(room)
 
         val result = roomService.findById(id)
@@ -60,7 +60,7 @@ class RoomServiceTest
     @Test
     fun `save persists the room with a generated new identifier`()
     {
-        val newRoom = NewRoom(RoomName("Salle C"), RoomCapacity(20))
+        val newRoom = NewRoom(RoomName("Salle C"), RoomCapacity(20), false)
         val captor = argumentCaptor<Room>()
         whenever(roomRepository.save(any())).thenAnswer { it.getArgument<Room>(0) }
 
@@ -76,8 +76,8 @@ class RoomServiceTest
     @Test
     fun `save returns the room persisted by the repository`()
     {
-        val newRoom = NewRoom(RoomName("Salle D"), RoomCapacity(15))
-        val savedRoom = Room(RoomId(UUID.randomUUID()), RoomName("Salle D"), RoomCapacity(15))
+        val newRoom = NewRoom(RoomName("Salle D"), RoomCapacity(15), false)
+        val savedRoom = Room(RoomId(UUID.randomUUID()), RoomName("Salle D"), RoomCapacity(15), false)
         whenever(roomRepository.save(any())).thenReturn(savedRoom)
 
         val result = roomService.save(newRoom)

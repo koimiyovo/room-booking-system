@@ -86,7 +86,8 @@ class BookingController(private val bookingUseCase: BookingUseCase)
             startDate = booking.startDate.value,
             endDate = booking.endDate.value,
             numberOfPeople = booking.numberOfPeople.value,
-            specialRequests = booking.specialRequests?.value
+            specialRequests = booking.specialRequests?.value,
+            status = booking.status.label
         )
         return ResponseEntity(response, HttpStatus.CREATED)
     }
@@ -112,6 +113,28 @@ class BookingController(private val bookingUseCase: BookingUseCase)
         if (!isAdmin && booking.userId != requestingUserId) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
         val history = bookingUseCase.findStatusHistory(bookingId).map { BookingStatusHistoryResponse.fromDomain(it) }
         return ResponseEntity.ok(history)
+    }
+
+    @PostMapping("/{id}/validate")
+    @Operation(summary = "Validate a pending booking (admin only)")
+    @ApiResponses(
+        ApiResponse(responseCode = "200", description = "Booking validated successfully"),
+        ApiResponse(responseCode = "401", description = "Authentication required"),
+        ApiResponse(responseCode = "403", description = "Admin role required"),
+        ApiResponse(responseCode = "404", description = "Booking not found"),
+        ApiResponse(responseCode = "409", description = "Booking is not in PENDING status")
+    )
+    fun validate(
+        @Parameter(description = "UUID identifier of the booking")
+        @PathVariable id: UUID,
+        authentication: Authentication
+    ): ResponseEntity<BookingResponse>
+    {
+        val isAdmin = authentication.authorities.any { it.authority == "ROLE_${ADMIN.label}" }
+        if (!isAdmin) return ResponseEntity.status(HttpStatus.FORBIDDEN).build()
+        val adminId = UserId(UUID.fromString(authentication.name))
+        val booking = bookingUseCase.validate(BookingId(id), adminId)
+        return ResponseEntity.ok(BookingResponse.fromDomain(booking))
     }
 
     @PostMapping("/{id}/cancel")

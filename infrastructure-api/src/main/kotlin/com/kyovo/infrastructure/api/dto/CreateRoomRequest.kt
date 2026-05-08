@@ -6,14 +6,16 @@ import com.kyovo.domain.model.room.RoomName
 
 data class CreateRoomRequest(
     val name: String,
-    val capacity: Int
+    val capacity: Int,
+    val requiresValidation: Boolean = false
 )
 {
     fun toNewRoom(): NewRoom
     {
         return NewRoom(
             name = RoomName(name),
-            capacity = RoomCapacity(capacity)
+            capacity = RoomCapacity(capacity),
+            requiresValidation = requiresValidation
         )
     }
 }

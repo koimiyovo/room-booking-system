@@ -14,6 +14,8 @@ data class Booking(
     val statusInfo: BookingStatusInfo
 )
 {
+    val status: BookingStatus get() = statusInfo.status
+
     fun transitionTo(
         target: BookingStatus,
         now: BookingStatusInfoDate,

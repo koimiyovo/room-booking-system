@@ -123,7 +123,7 @@ class RoomControllerIntegrationTest
     {
         mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Conférence", 25))
+            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Conférence", 25, false))
             header("Authorization", "Bearer $adminToken")
         }.andExpect {
             status { isCreated() }
@@ -138,7 +138,7 @@ class RoomControllerIntegrationTest
     {
         mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle", 10))
+            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle", 10, false))
             header("Authorization", "Bearer $userToken")
         }.andExpect {
             status { isForbidden() }
@@ -150,7 +150,7 @@ class RoomControllerIntegrationTest
     {
         val postResult = mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Réunion", 12))
+            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Réunion", 12, false))
             header("Authorization", "Bearer $adminToken")
         }.andReturn()
 
@@ -172,7 +172,7 @@ class RoomControllerIntegrationTest
     {
         val postResult = mockMvc.post("/api/rooms") {
             contentType = MediaType.APPLICATION_JSON
-            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Formation", 30))
+            content = objectMapper.writeValueAsString(CreateRoomRequest("Salle Formation", 30, false))
             header("Authorization", "Bearer $adminToken")
         }.andReturn()
 
