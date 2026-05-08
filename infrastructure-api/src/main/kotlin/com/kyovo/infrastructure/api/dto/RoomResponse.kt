@@ -7,7 +7,8 @@ data class RoomResponse(
     val id: UUID,
     val name: String,
     val capacity: Int,
-    val requiresValidation: Boolean
+    val requiresValidation: Boolean,
+    val createdBy: UUID
 )
 {
     companion object
@@ -18,7 +19,8 @@ data class RoomResponse(
                 id = room.id.value,
                 name = room.name.value,
                 capacity = room.capacity.value,
-                requiresValidation = room.requiresValidation
+                requiresValidation = room.requiresValidation,
+                createdBy = room.createdBy.value
             )
         }
     }

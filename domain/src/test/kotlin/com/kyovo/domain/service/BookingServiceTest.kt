@@ -35,8 +35,9 @@ class BookingServiceTest
 
     private val roomId = RoomId(UUID.randomUUID())
     private val userId = UserId(UUID.randomUUID())
-    private val room = Room(roomId, RoomName("Conference Room"), RoomCapacity(10), requiresValidation = false)
-    private val roomWithValidation = Room(roomId, RoomName("Board Room"), RoomCapacity(10), requiresValidation = true)
+    private val creatorId = UserId(UUID.fromString("aa000000-0000-0000-0000-000000000001"))
+    private val room = Room(roomId, RoomName("Conference Room"), RoomCapacity(10), requiresValidation = false, createdBy = creatorId)
+    private val roomWithValidation = Room(roomId, RoomName("Board Room"), RoomCapacity(10), requiresValidation = true, createdBy = creatorId)
     private val startDate = BookingStartDate(LocalDate.of(2026, 6, 1))
     private val endDate = BookingEndDate(LocalDate.of(2026, 6, 3))
     private val newBooking = NewBooking(roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)

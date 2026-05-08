@@ -1,6 +1,7 @@
 package com.kyovo.infrastructure.api.controller
 
 import com.kyovo.domain.model.room.*
+import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.port.primary.RoomUseCase
 import com.kyovo.domain.port.primary.UserUseCase
 import com.kyovo.infrastructure.api.dto.CreateRoomRequest
@@ -22,7 +23,7 @@ import tools.jackson.databind.ObjectMapper
 import java.util.*
 
 @WebMvcTest(RoomController::class)
-@WithMockUser(roles = ["ADMIN"])
+@WithMockUser(username = "aa000000-0000-0000-0000-000000000001", roles = ["ADMIN"])
 class RoomControllerWebMvcTest
 {
     @Autowired
@@ -41,7 +42,8 @@ class RoomControllerWebMvcTest
     private lateinit var jwtService: JwtService
 
     private val roomId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000")
-    private val room = Room(RoomId(roomId), RoomName("Salle A"), RoomCapacity(10), false)
+    private val adminId = UUID.fromString("aa000000-0000-0000-0000-000000000001")
+    private val room = Room(RoomId(roomId), RoomName("Salle A"), RoomCapacity(10), false, UserId(adminId))
 
     @Test
     fun `GET api-rooms returns 200 with the list of rooms`()
@@ -99,7 +101,7 @@ class RoomControllerWebMvcTest
     fun `POST api-rooms returns 201 with the created room`()
     {
         val request = CreateRoomRequest("Salle B", 20, false)
-        val createdRoom = Room(RoomId(roomId), RoomName("Salle B"), RoomCapacity(20), false)
+        val createdRoom = Room(RoomId(roomId), RoomName("Salle B"), RoomCapacity(20), false, UserId(adminId))
         whenever(roomUseCase.save(any())).thenReturn(createdRoom)
 
         mockMvc.post("/api/rooms") {
@@ -119,7 +121,7 @@ class RoomControllerWebMvcTest
     {
         val request = CreateRoomRequest("Salle C", 30, false)
         whenever(roomUseCase.save(any())).thenReturn(
-            Room(RoomId(roomId), RoomName("Salle C"), RoomCapacity(30), false)
+            Room(RoomId(roomId), RoomName("Salle C"), RoomCapacity(30), false, UserId(adminId))
         )
 
         mockMvc.post("/api/rooms") {
@@ -130,6 +132,6 @@ class RoomControllerWebMvcTest
             status { isCreated() }
         }
 
-        verify(roomUseCase).save(NewRoom(RoomName("Salle C"), RoomCapacity(30), false))
+        verify(roomUseCase).save(NewRoom(RoomName("Salle C"), RoomCapacity(30), false, UserId(adminId)))
     }
 }

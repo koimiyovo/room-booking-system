@@ -130,6 +130,8 @@ class RoomControllerIntegrationTest
             jsonPath("$.id") { isNotEmpty() }
             jsonPath("$.name") { value("Salle Conférence") }
             jsonPath("$.capacity") { value(25) }
+            jsonPath("$.requires_validation") { value(false) }
+            jsonPath("$.created_by") { isNotEmpty() }
         }
     }
 

@@ -5,10 +5,14 @@ import com.kyovo.domain.model.room.RoomId
 import com.kyovo.domain.port.secondary.RoomRepository
 import com.kyovo.infrastructure.persistence.entity.RoomEntity
 import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
+import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
 import org.springframework.stereotype.Component
 
 @Component
-class RoomPersistenceAdapter(private val jpaRepository: RoomJpaRepository) : RoomRepository
+class RoomPersistenceAdapter(
+    private val jpaRepository: RoomJpaRepository,
+    private val userJpaRepository: UserJpaRepository
+) : RoomRepository
 {
     override fun findAll(): List<Room>
     {
@@ -27,7 +31,8 @@ class RoomPersistenceAdapter(private val jpaRepository: RoomJpaRepository) : Roo
 
     override fun save(room: Room): Room
     {
-        val entity = RoomEntity.fromDomain(room)
+        val createdByUser = userJpaRepository.getReferenceById(room.createdBy.value)
+        val entity = RoomEntity.fromDomain(room, createdByUser)
         return jpaRepository.save(entity).toDomain()
     }
 }

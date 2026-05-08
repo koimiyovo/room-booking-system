@@ -1,6 +1,7 @@
 package com.kyovo.domain.service
 
 import com.kyovo.domain.model.room.*
+import com.kyovo.domain.model.user.UserId
 import com.kyovo.domain.port.secondary.RoomRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -12,11 +13,12 @@ class RoomServiceTest
 
     private val roomRepository: RoomRepository = mock()
     private val roomService = RoomService(roomRepository)
+    private val creatorId = UserId(UUID.fromString("aa000000-0000-0000-0000-000000000001"))
 
     @Test
     fun `findAll returns all rooms from the repository`()
     {
-        val rooms = listOf(Room(RoomId(UUID.randomUUID()), RoomName("Salle A"), RoomCapacity(10), false))
+        val rooms = listOf(Room(RoomId(UUID.randomUUID()), RoomName("Salle A"), RoomCapacity(10), false, creatorId))
         whenever(roomRepository.findAll()).thenReturn(rooms)
 
         val result = roomService.findAll()
@@ -38,7 +40,7 @@ class RoomServiceTest
     fun `findById returns the room when it exists`()
     {
         val id = RoomId(UUID.randomUUID())
-        val room = Room(id, RoomName("Salle B"), RoomCapacity(5), false)
+        val room = Room(id, RoomName("Salle B"), RoomCapacity(5), false, creatorId)
         whenever(roomRepository.findById(id)).thenReturn(room)
 
         val result = roomService.findById(id)
@@ -60,7 +62,7 @@ class RoomServiceTest
     @Test
     fun `save persists the room with a generated new identifier`()
     {
-        val newRoom = NewRoom(RoomName("Salle C"), RoomCapacity(20), false)
+        val newRoom = NewRoom(RoomName("Salle C"), RoomCapacity(20), false, creatorId)
         val captor = argumentCaptor<Room>()
         whenever(roomRepository.save(any())).thenAnswer { it.getArgument<Room>(0) }
 
@@ -76,8 +78,8 @@ class RoomServiceTest
     @Test
     fun `save returns the room persisted by the repository`()
     {
-        val newRoom = NewRoom(RoomName("Salle D"), RoomCapacity(15), false)
-        val savedRoom = Room(RoomId(UUID.randomUUID()), RoomName("Salle D"), RoomCapacity(15), false)
+        val newRoom = NewRoom(RoomName("Salle D"), RoomCapacity(15), false, creatorId)
+        val savedRoom = Room(RoomId(UUID.randomUUID()), RoomName("Salle D"), RoomCapacity(15), false, creatorId)
         whenever(roomRepository.save(any())).thenReturn(savedRoom)
 
         val result = roomService.save(newRoom)
