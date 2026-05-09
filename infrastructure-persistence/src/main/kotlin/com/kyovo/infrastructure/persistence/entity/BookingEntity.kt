@@ -3,10 +3,8 @@ package com.kyovo.infrastructure.persistence.entity
 import com.kyovo.domain.model.booking.*
 import com.kyovo.domain.model.room.RoomId
 import com.kyovo.domain.model.user.UserId
-import com.kyovo.infrastructure.persistence.exception.InvalidBookingStatusException
 import jakarta.persistence.*
 import java.time.LocalDate
-import java.time.OffsetDateTime
 import java.util.*
 
 @Entity
@@ -33,34 +31,12 @@ class BookingEntity(
     val numberOfPeople: Int,
 
     @Column(name = "special_requests", nullable = true)
-    val specialRequests: String?,
-
-    @Column(nullable = false)
-    val status: String,
-
-    @Column(name = "status_since", nullable = false)
-    val statusSince: OffsetDateTime,
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = true)
-    @JoinColumn(
-        name = "status_changed_by",
-        nullable = true,
-        foreignKey = ForeignKey(name = "fk_booking_status_changed_by")
-    )
-    val statusChangedByUser: UserEntity?,
-
-    @Column(name = "status_reason", nullable = true)
-    val statusReason: String?
+    val specialRequests: String?
 )
 {
     companion object
     {
-        fun fromDomain(
-            booking: Booking,
-            room: RoomEntity,
-            user: UserEntity,
-            statusChangedByUser: UserEntity?
-        ): BookingEntity
+        fun fromDomain(booking: Booking, room: RoomEntity, user: UserEntity): BookingEntity
         {
             return BookingEntity(
                 id = booking.id.value,
@@ -69,25 +45,13 @@ class BookingEntity(
                 startDate = booking.startDate.value,
                 endDate = booking.endDate.value,
                 numberOfPeople = booking.numberOfPeople.value,
-                specialRequests = booking.specialRequests?.value,
-                status = booking.statusInfo.status.label,
-                statusSince = booking.statusInfo.since.value,
-                statusChangedByUser = statusChangedByUser,
-                statusReason = booking.statusInfo.reason?.value
+                specialRequests = booking.specialRequests?.value
             )
         }
     }
 
-    fun toDomain(): Booking
+    fun toDomain(statusInfo: BookingStatusInfo): Booking
     {
-        val parsedStatus = BookingStatus.entries.firstOrNull { it.label == status }
-            ?: throw InvalidBookingStatusException(status)
-        val statusInfo = BookingStatusInfo(
-            status = parsedStatus,
-            since = BookingStatusInfoDate(statusSince),
-            changedBy = statusChangedByUser?.let { UserId(it.id) },
-            reason = statusReason?.let { BookingStatusReason(it) }
-        )
         return Booking(
             id = BookingId(id),
             roomId = RoomId(room.id),
