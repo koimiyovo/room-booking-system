@@ -18,7 +18,8 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 - **Kotlin** 2.3 / **Java** 19
 - **Spring Boot** 4.0
 - **Spring Security** 7 — stateless JWT
-- **Spring Data JPA** / **H2** (in-memory) — with referential integrity enforced via FK constraints
+- **Spring Data JPA** / **PostgreSQL** (production) / **H2** (tests) — with referential integrity enforced via FK constraints
+- **Flyway** 11 — database schema versioning
 - **jjwt** 0.13 — JWT generation and validation
 - **ArchUnit** 1.4 — architecture rules enforced as tests
 - **Maven** multi-module build
@@ -47,6 +48,7 @@ bootstrap ──────────────► infrastructure-api + inf
 
 - JDK 19
 - Maven 3.9+
+- Docker (for PostgreSQL) or a local PostgreSQL 17 instance
 
 ## Getting started
 
@@ -55,16 +57,31 @@ bootstrap ──────────────► infrastructure-api + inf
 git clone https://github.com/koimiyovo/room-booking-system.git
 cd room-booking-system
 
-# Build
-mvn clean package -DskipTests
-
-# Run
-mvn spring-boot:run -pl bootstrap
+# Start a PostgreSQL container
+docker run -d --name postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=room_booking -p 5432:5432 postgres:17-alpine
 ```
 
-The application starts on `http://localhost:8080`.
+**Linux / macOS** — use `make`:
 
-On startup, `DataInitializer` seeds sample rooms, an admin user, and a regular user.
+```bash
+make build       # build without tests
+make run         # start (prod-like, no seed data)
+make run-dev     # start with dev profile (wipes and reseeds tables on every startup)
+make stop        # stop the application
+```
+
+**Windows** — use the PowerShell script:
+
+```powershell
+.\scripts.ps1 build
+.\scripts.ps1 run
+.\scripts.ps1 run-dev
+.\scripts.ps1 stop
+```
+
+The application starts on `http://localhost:8080`. Flyway applies pending migrations automatically on startup.
+
+`DataInitializer` (seed data) only runs when the `dev` profile is active (`run-dev`).
 
 ## API
 
@@ -109,9 +126,14 @@ Interactive documentation is available at `http://localhost:8080/swagger-ui/inde
 
 ## Running tests
 
+Tests always use H2 in-memory — no PostgreSQL required.
+
 ```bash
-# All tests
-mvn clean test
+# All tests (Linux/macOS)
+make test
+
+# All tests (Windows)
+.\scripts.ps1 test
 
 # Single module
 mvn clean test -pl domain
