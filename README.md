@@ -18,8 +18,9 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 - **Kotlin** 2.3 / **Java** 19
 - **Spring Boot** 4.0
 - **Spring Security** 7 — stateless JWT
-- **Spring Data JPA** / **PostgreSQL** (production) / **H2** (tests) — with referential integrity enforced via FK constraints
+- **Spring Data JPA** / **PostgreSQL** (production and integration tests via Testcontainers) — with referential integrity enforced via FK constraints
 - **Flyway** 11 — database schema versioning
+- **Testcontainers** 2.0 — real PostgreSQL container for integration tests
 - **jjwt** 0.13 — JWT generation and validation
 - **ArchUnit** 1.4 — architecture rules enforced as tests
 - **Maven** multi-module build
@@ -48,7 +49,7 @@ bootstrap ──────────────► infrastructure-api + inf
 
 - JDK 19
 - Maven 3.9+
-- Docker (for PostgreSQL) or a local PostgreSQL 17 instance
+- Docker (for PostgreSQL in production and for integration tests)
 
 ## Getting started
 
@@ -126,7 +127,9 @@ Interactive documentation is available at `http://localhost:8080/swagger-ui/inde
 
 ## Running tests
 
-Tests always use H2 in-memory — no PostgreSQL required.
+**Docker must be running** — integration tests (`bootstrap` module) spin up a real PostgreSQL 17 container via Testcontainers. Domain unit tests and web slice tests have no external dependency.
+
+On Windows, Docker Desktop must have "Expose daemon on TCP without TLS" enabled (Settings → General).
 
 ```bash
 # All tests (Linux/macOS)
@@ -144,7 +147,7 @@ mvn clean test -pl bootstrap
 mvn clean test -Dtest=RoomServiceTest
 ```
 
-The test suite includes domain unit tests, web slice tests (`@WebMvcTest`), integration tests (`@SpringBootTest` + `@AutoConfigureMockMvc`), and architecture rules enforced via ArchUnit.
+The test suite includes domain unit tests, web slice tests (`@WebMvcTest`), integration tests (`@SpringBootTest` + real PostgreSQL via Testcontainers), and architecture rules enforced via ArchUnit.
 
 ## License
 

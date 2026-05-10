@@ -32,6 +32,8 @@
         <springdoc-openapi.version>3.0.3</springdoc-openapi.version>
         <jjwt.version>0.13.0</jjwt.version>
         <archunit.version>1.4.2</archunit.version>
+        <testcontainers.version>2.0.2</testcontainers.version>
+        <testcontainers.postgresql.version>1.21.4</testcontainers.postgresql.version>
     </properties>
 
     <dependencyManagement>
@@ -91,6 +93,13 @@
                 <artifactId>archunit-junit5</artifactId>
                 <version>${archunit.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -104,6 +113,9 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <configuration>
                         <jvm>${java.home}/bin/java</jvm>
+                        <environmentVariables>
+                            <DOCKER_HOST>tcp://127.0.0.1:2375</DOCKER_HOST>
+                        </environmentVariables>
                     </configuration>
                 </plugin>
                 <plugin>

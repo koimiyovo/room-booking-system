@@ -1,6 +1,5 @@
 package com.kyovo
 
-import com.kyovo.config.TestTimeProviderConfig
 import com.kyovo.infrastructure.api.dto.LoginRequest
 import com.kyovo.infrastructure.api.dto.RegisterRequest
 import com.kyovo.infrastructure.api.dto.UpdateUserRequest
@@ -16,9 +15,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
-import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.test.web.servlet.*
@@ -28,10 +24,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.*
 
-@SpringBootTest
-@Import(TestTimeProviderConfig::class)
-@AutoConfigureMockMvc
-class UserControllerIntegrationTest
+class UserControllerIntegrationTest : AbstractIntegrationTest()
 {
     @Autowired
     private lateinit var mockMvc: MockMvc
