@@ -49,29 +49,56 @@ bootstrap ──────────────► infrastructure-api + inf
 
 - JDK 19
 - Maven 3.9+
-- Docker (for PostgreSQL in production and for integration tests)
+- Docker (required for running via Docker Compose and for integration tests)
 
 ## Getting started
 
 ```bash
-# Clone the repository
 git clone https://github.com/koimiyovo/room-booking-system.git
 cd room-booking-system
-
-# Start a PostgreSQL container
-docker run -d --name postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=room_booking -p 5432:5432 postgres:17-alpine
 ```
 
-**Linux / macOS** — use `make`:
+### With Docker (recommended)
+
+No local JDK or PostgreSQL needed — everything runs in containers.
+
+**Linux / macOS:**
 
 ```bash
-make build       # build without tests
-make run         # start (prod-like, no seed data)
-make run-dev     # start with dev profile (wipes and reseeds tables on every startup)
-make stop        # stop the application
+make docker-up        # build image and start app + Postgres
+make docker-up-dev    # same, with dev profile (seeds sample data)
+make docker-down      # stop and remove containers
+make docker-down-v    # stop and remove containers + Postgres volume
+make docker-logs      # follow application logs
+make docker-build     # build the image without starting
 ```
 
-**Windows** — use the PowerShell script:
+**Windows:**
+
+```powershell
+.\scripts.ps1 docker-up        # build image and start app + Postgres
+.\scripts.ps1 docker-up-dev    # same, with dev profile (seeds sample data)
+.\scripts.ps1 docker-down      # stop and remove containers
+.\scripts.ps1 docker-down-v    # stop and remove containers + Postgres volume
+.\scripts.ps1 docker-logs      # follow application logs
+.\scripts.ps1 docker-build     # build the image without starting
+```
+
+### Without Docker (local Maven)
+
+Requires a running PostgreSQL instance on `localhost:5432` (database `room_booking`, user/password `postgres`).
+
+**Linux / macOS:**
+
+```bash
+make build       # package without tests
+make run         # start (no seed data)
+make run-dev     # start with dev profile (seeds sample data on startup)
+make stop        # kill the process on port 8080
+make help        # list all available commands
+```
+
+**Windows:**
 
 ```powershell
 .\scripts.ps1 build
@@ -82,7 +109,39 @@ make stop        # stop the application
 
 The application starts on `http://localhost:8080`. Flyway applies pending migrations automatically on startup.
 
-`DataInitializer` (seed data) only runs when the `dev` profile is active (`run-dev`).
+`DataInitializer` (seed data) only runs when the `dev` profile is active (`run-dev` / `docker-up-dev`).
+
+## Versioning
+
+The project follows [Semantic Versioning](https://semver.org). The current version is the Maven project version in `pom.xml`.
+
+**Linux / macOS:**
+
+```bash
+make release-patch   # bug fix      1.0.0 -> 1.0.1
+make release-minor   # new feature  1.0.0 -> 1.1.0
+make release-major   # breaking     1.0.0 -> 2.0.0
+```
+
+**Windows:**
+
+```powershell
+.\scripts.ps1 release-patch
+.\scripts.ps1 release-minor
+.\scripts.ps1 release-major
+```
+
+Each command:
+1. Bumps the version in all `pom.xml` files
+2. Creates a git commit `chore: release vX.Y.Z`
+3. Creates a git tag `vX.Y.Z`
+4. Builds the Docker image tagged `room-booking-system:X.Y.Z` and `room-booking-system:latest`
+
+Push to the remote when ready:
+
+```bash
+git push && git push --tags
+```
 
 ## API
 
@@ -137,6 +196,10 @@ make test
 
 # All tests (Windows)
 .\scripts.ps1 test
+
+# List all available commands
+make help
+.\scripts.ps1
 
 # Single module
 mvn clean test -pl domain
