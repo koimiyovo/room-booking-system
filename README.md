@@ -111,6 +111,38 @@ The application starts on `http://localhost:8080`. Flyway applies pending migrat
 
 `DataInitializer` (seed data) only runs when the `dev` profile is active (`run-dev` / `docker-up-dev`).
 
+## Versioning
+
+The project follows [Semantic Versioning](https://semver.org). The current version is the Maven project version in `pom.xml`.
+
+**Linux / macOS:**
+
+```bash
+make release-patch   # bug fix      1.0.0 -> 1.0.1
+make release-minor   # new feature  1.0.0 -> 1.1.0
+make release-major   # breaking     1.0.0 -> 2.0.0
+```
+
+**Windows:**
+
+```powershell
+.\scripts.ps1 release-patch
+.\scripts.ps1 release-minor
+.\scripts.ps1 release-major
+```
+
+Each command:
+1. Bumps the version in all `pom.xml` files
+2. Creates a git commit `chore: release vX.Y.Z`
+3. Creates a git tag `vX.Y.Z`
+4. Builds the Docker image tagged `room-booking-system:X.Y.Z` and `room-booking-system:latest`
+
+Push to the remote when ready:
+
+```bash
+git push && git push --tags
+```
+
 ## API
 
 Interactive documentation is available at `http://localhost:8080/swagger-ui/index.html` once the application is running.

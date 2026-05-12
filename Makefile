@@ -1,5 +1,8 @@
 .PHONY: help run run-dev stop build test \
-        docker-build docker-up docker-up-dev docker-down docker-down-v docker-logs
+        docker-build docker-up docker-up-dev docker-down docker-down-v docker-logs \
+        release-patch release-minor release-major _release
+
+VERSION := $(shell mvn help:evaluate -Dexpression=project.version -q -DforceStdout 2>/dev/null)
 
 help:
 	@echo ""
@@ -18,8 +21,13 @@ help:
 	@echo "  docker-down-v  Stop and remove containers + Postgres volume"
 	@echo "  docker-logs    Follow application logs"
 	@echo ""
+	@echo "Release (current: $(VERSION)):"
+	@echo "  release-patch  bump patch  e.g. $(VERSION) -> x.y.Z+1  (bug fix)"
+	@echo "  release-minor  bump minor  e.g. $(VERSION) -> x.Y+1.0  (new feature)"
+	@echo "  release-major  bump major  e.g. $(VERSION) -> X+1.0.0  (breaking change)"
+	@echo ""
 
-# ── Maven ────────────────────────────────────────────────────────────────────
+# -- Maven -------------------------------------------------------------------
 
 run:
 	mvn spring-boot:run -pl bootstrap
@@ -36,7 +44,7 @@ build:
 test:
 	mvn clean test
 
-# ── Docker ───────────────────────────────────────────────────────────────────
+# -- Docker ------------------------------------------------------------------
 
 docker-build:
 	docker compose build
@@ -55,3 +63,25 @@ docker-down-v:
 
 docker-logs:
 	docker compose logs -f app
+
+# -- Release -----------------------------------------------------------------
+
+release-patch:
+	$(MAKE) _release NEW_VERSION=$(shell echo "$(VERSION)" | awk -F. '{print $$1"."$$2"."$$3+1}')
+
+release-minor:
+	$(MAKE) _release NEW_VERSION=$(shell echo "$(VERSION)" | awk -F. '{print $$1"."$$2+1".0"}')
+
+release-major:
+	$(MAKE) _release NEW_VERSION=$(shell echo "$(VERSION)" | awk -F. '{print $$1+1".0.0"}')
+
+_release:
+	@echo "Releasing v$(NEW_VERSION)..."
+	mvn versions:set -DnewVersion=$(NEW_VERSION) -DgenerateBackupPoms=false
+	git add pom.xml domain/pom.xml infrastructure-api/pom.xml infrastructure-persistence/pom.xml infrastructure-provider/pom.xml bootstrap/pom.xml
+	git commit -m "chore: release v$(NEW_VERSION)"
+	git tag v$(NEW_VERSION)
+	APP_VERSION=$(NEW_VERSION) docker compose build
+	docker tag room-booking-system:$(NEW_VERSION) room-booking-system:latest
+	@echo ""
+	@echo "Released v$(NEW_VERSION) — push when ready: git push && git push --tags"
