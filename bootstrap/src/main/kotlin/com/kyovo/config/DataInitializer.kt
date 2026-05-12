@@ -8,20 +8,38 @@ import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.primary.AuthUseCase
 import com.kyovo.domain.port.primary.BookingUseCase
 import com.kyovo.domain.port.primary.RoomUseCase
+import com.kyovo.infrastructure.persistence.repository.BookingJpaRepository
+import com.kyovo.infrastructure.persistence.repository.BookingStatusHistoryJpaRepository
+import com.kyovo.infrastructure.persistence.repository.RoomJpaRepository
+import com.kyovo.infrastructure.persistence.repository.UserJpaRepository
+import com.kyovo.infrastructure.persistence.repository.UserStatusHistoryJpaRepository
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Component
 import java.time.LocalDate
 
 @Component
+@Profile("dev")
 class DataInitializer(
     private val roomUseCase: RoomUseCase,
     private val authUseCase: AuthUseCase,
-    private val bookingUseCase: BookingUseCase
+    private val bookingUseCase: BookingUseCase,
+    private val bookingStatusHistoryJpaRepository: BookingStatusHistoryJpaRepository,
+    private val bookingJpaRepository: BookingJpaRepository,
+    private val userStatusHistoryJpaRepository: UserStatusHistoryJpaRepository,
+    private val roomJpaRepository: RoomJpaRepository,
+    private val userJpaRepository: UserJpaRepository
 ) : ApplicationRunner
 {
     override fun run(args: ApplicationArguments)
     {
+        bookingStatusHistoryJpaRepository.deleteAllInBatch()
+        bookingJpaRepository.deleteAllInBatch()
+        userStatusHistoryJpaRepository.deleteAllInBatch()
+        roomJpaRepository.deleteAllInBatch()
+        userJpaRepository.deleteAllInBatch()
+
         val admin = authUseCase.register(
             NewUser(
                 UserName("Admin"),
@@ -34,6 +52,7 @@ class DataInitializer(
         val boardRoom = roomUseCase.save(NewRoom(RoomName("Board Room"), RoomCapacity(20), false, admin.id))
         val trainingRoom = roomUseCase.save(NewRoom(RoomName("Training Room"), RoomCapacity(30), false, admin.id))
         roomUseCase.save(NewRoom(RoomName("Focus Room"), RoomCapacity(4), false, admin.id))
+
         val alice = authUseCase.register(
             NewUser(
                 UserName("Alice Johnson"),

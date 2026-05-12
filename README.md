@@ -18,7 +18,9 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 - **Kotlin** 2.3 / **Java** 19
 - **Spring Boot** 4.0
 - **Spring Security** 7 — stateless JWT
-- **Spring Data JPA** / **H2** (in-memory) — with referential integrity enforced via FK constraints
+- **Spring Data JPA** / **PostgreSQL** (production and integration tests via Testcontainers) — with referential integrity enforced via FK constraints
+- **Flyway** 11 — database schema versioning
+- **Testcontainers** 2.0 — real PostgreSQL container for integration tests
 - **jjwt** 0.13 — JWT generation and validation
 - **ArchUnit** 1.4 — architecture rules enforced as tests
 - **Maven** multi-module build
@@ -47,6 +49,7 @@ bootstrap ──────────────► infrastructure-api + inf
 
 - JDK 19
 - Maven 3.9+
+- Docker (for PostgreSQL in production and for integration tests)
 
 ## Getting started
 
@@ -55,16 +58,31 @@ bootstrap ──────────────► infrastructure-api + inf
 git clone https://github.com/koimiyovo/room-booking-system.git
 cd room-booking-system
 
-# Build
-mvn clean package -DskipTests
-
-# Run
-mvn spring-boot:run -pl bootstrap
+# Start a PostgreSQL container
+docker run -d --name postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=room_booking -p 5432:5432 postgres:17-alpine
 ```
 
-The application starts on `http://localhost:8080`.
+**Linux / macOS** — use `make`:
 
-On startup, `DataInitializer` seeds sample rooms, an admin user, and a regular user.
+```bash
+make build       # build without tests
+make run         # start (prod-like, no seed data)
+make run-dev     # start with dev profile (wipes and reseeds tables on every startup)
+make stop        # stop the application
+```
+
+**Windows** — use the PowerShell script:
+
+```powershell
+.\scripts.ps1 build
+.\scripts.ps1 run
+.\scripts.ps1 run-dev
+.\scripts.ps1 stop
+```
+
+The application starts on `http://localhost:8080`. Flyway applies pending migrations automatically on startup.
+
+`DataInitializer` (seed data) only runs when the `dev` profile is active (`run-dev`).
 
 ## API
 
@@ -109,9 +127,16 @@ Interactive documentation is available at `http://localhost:8080/swagger-ui/inde
 
 ## Running tests
 
+**Docker must be running** — integration tests (`bootstrap` module) spin up a real PostgreSQL 17 container via Testcontainers. Domain unit tests and web slice tests have no external dependency.
+
+On Windows, Docker Desktop must have "Expose daemon on TCP without TLS" enabled (Settings → General).
+
 ```bash
-# All tests
-mvn clean test
+# All tests (Linux/macOS)
+make test
+
+# All tests (Windows)
+.\scripts.ps1 test
 
 # Single module
 mvn clean test -pl domain
@@ -122,7 +147,7 @@ mvn clean test -pl bootstrap
 mvn clean test -Dtest=RoomServiceTest
 ```
 
-The test suite includes domain unit tests, web slice tests (`@WebMvcTest`), integration tests (`@SpringBootTest` + `@AutoConfigureMockMvc`), and architecture rules enforced via ArchUnit.
+The test suite includes domain unit tests, web slice tests (`@WebMvcTest`), integration tests (`@SpringBootTest` + real PostgreSQL via Testcontainers), and architecture rules enforced via ArchUnit.
 
 ## License
 

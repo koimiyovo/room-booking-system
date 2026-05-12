@@ -28,9 +28,24 @@ class BookingStatusHistoryEntity(
     val changedByUser: UserEntity?,
 
     @Column(nullable = true)
-    val reason: String?
+    val reason: String?,
+
+    @Column(nullable = true)
+    val until: OffsetDateTime?
 )
 {
+    fun toStatusInfo(): BookingStatusInfo
+    {
+        val parsedStatus = BookingStatus.entries.firstOrNull { it.label == status }
+            ?: throw InvalidBookingStatusException(status)
+        return BookingStatusInfo(
+            status = parsedStatus,
+            since = BookingStatusInfoDate(changedAt),
+            changedBy = changedByUser?.let { UserId(it.id) },
+            reason = reason?.let { BookingStatusReason(it) }
+        )
+    }
+
     fun toDomain(): BookingStatusHistory
     {
         val parsedStatus = BookingStatus.entries.firstOrNull { it.label == status }
