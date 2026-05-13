@@ -49,8 +49,8 @@ switch ($Command) {
 
     # -- Maven -------------------------------------------------------------------
 
-    "run"     { mvn spring-boot:run -pl bootstrap }
-    "run-dev" { mvn spring-boot:run -pl bootstrap "-Dspring.profiles.active=dev" }
+    "run"     { mvn install -DskipTests; if ($?) { mvn spring-boot:run -pl bootstrap } }
+    "run-dev" { mvn install -DskipTests; if ($?) { mvn spring-boot:run -pl bootstrap "-Dspring.profiles.active=dev" } }
     "stop"    {
         $conn = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
         if ($conn) {

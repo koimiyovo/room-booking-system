@@ -145,44 +145,68 @@ git push && git push --tags
 
 ## API
 
-Interactive documentation is available at `http://localhost:8080/swagger-ui/index.html` once the application is running.
+All endpoints are prefixed with `/api/v1`. Interactive documentation is available at `http://localhost:8080/swagger-ui/index.html` once the application is running.
+
+### Version
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/api/v1/version` | Public | Get the application version |
 
 ### Authentication
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/api/auth/register` | Public | Create an account |
-| POST | `/api/auth/login` | Public | Obtain a JWT token |
-| POST | `/api/auth/logout` | Authenticated | Invalidate the current token |
+| POST | `/api/v1/auth/register` | Public | Create an account |
+| POST | `/api/v1/auth/login` | Public | Obtain a JWT token |
+| POST | `/api/v1/auth/logout` | Authenticated | Invalidate the current token |
 
 ### Rooms
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/api/rooms` | Authenticated | List all rooms |
-| GET | `/api/rooms/{id}` | Authenticated | Get a room by id |
-| POST | `/api/rooms` | ADMIN | Create a room |
+| GET | `/api/v1/rooms` | Authenticated | List all rooms |
+| GET | `/api/v1/rooms/{id}` | Authenticated | Get a room by id |
+| POST | `/api/v1/rooms` | ADMIN | Create a room |
 
 ### Bookings
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/api/bookings` | ADMIN | List all bookings |
-| GET | `/api/bookings/{id}` | Authenticated | Get a booking by id |
-| POST | `/api/bookings` | Authenticated | Create a booking |
-| POST | `/api/bookings/{id}/cancel` | Authenticated | Cancel a booking |
+| GET | `/api/v1/bookings` | ADMIN | List all bookings |
+| GET | `/api/v1/bookings/{id}` | Authenticated | Get a booking by id |
+| POST | `/api/v1/bookings` | Authenticated | Create a booking |
+| POST | `/api/v1/bookings/{id}/cancel` | Authenticated | Cancel a booking |
 
 ### Users
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/api/users` | ADMIN | List all users (including deleted) |
-| GET | `/api/users/{id}` | ADMIN | Get a user by id (404 if deleted) |
-| PUT | `/api/users/{id}` | Authenticated | Update own account |
-| DELETE | `/api/users/{id}` | Authenticated | Soft-delete own account |
-| POST | `/api/users/{id}/validate` | Authenticated | Transition CREATED → ACTIVE |
-| POST | `/api/users/{id}/deactivate` | ADMIN | Transition ACTIVE → INACTIVE |
-| POST | `/api/users/{id}/reactivate` | ADMIN | Transition INACTIVE → ACTIVE |
+| GET | `/api/v1/users` | ADMIN | List all users (including deleted) |
+| GET | `/api/v1/users/{id}` | ADMIN | Get a user by id (404 if deleted) |
+| PUT | `/api/v1/users/{id}` | Authenticated | Update own account |
+| DELETE | `/api/v1/users/{id}` | Authenticated | Soft-delete own account |
+| POST | `/api/v1/users/{id}/validate` | Authenticated | Transition CREATED → ACTIVE |
+| POST | `/api/v1/users/{id}/deactivate` | ADMIN | Transition ACTIVE → INACTIVE |
+| POST | `/api/v1/users/{id}/reactivate` | ADMIN | Transition INACTIVE → ACTIVE |
+
+## CI/CD
+
+The GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push and pull request to `main`:
+
+1. **Test** — compiles all modules and runs the full test suite (unit, web slice, integration via Testcontainers, architecture).
+2. **Publish** *(push to `main` only)* — builds the Docker image and pushes it to the GitHub Container Registry:
+
+```
+ghcr.io/koimiyovo/room-booking-system:latest
+ghcr.io/koimiyovo/room-booking-system:sha-<commit>
+```
+
+Pull the latest image:
+
+```bash
+docker pull ghcr.io/koimiyovo/room-booking-system:latest
+```
 
 ## Running tests
 

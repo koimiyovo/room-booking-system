@@ -30,10 +30,10 @@ help:
 # -- Maven -------------------------------------------------------------------
 
 run:
-	mvn spring-boot:run -pl bootstrap
+	mvn install -DskipTests && mvn spring-boot:run -pl bootstrap
 
 run-dev:
-	mvn spring-boot:run -pl bootstrap -Dspring.profiles.active=dev
+	mvn install -DskipTests && mvn spring-boot:run -pl bootstrap -Dspring.profiles.active=dev
 
 stop:
 	@-pkill -f "spring-boot" 2>/dev/null || true

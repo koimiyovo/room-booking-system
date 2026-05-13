@@ -27,6 +27,7 @@ class SecurityConfig(private val jwtAuthenticationFilter: JwtAuthenticationFilte
                 auth
                     .requestMatchers(HttpMethod.POST, "$API_V1/auth/register", "$API_V1/auth/login").permitAll()
                     .requestMatchers(HttpMethod.POST, "$API_V1/auth/logout").authenticated()
+                    .requestMatchers(HttpMethod.GET, "$API_V1/version").permitAll()
                     .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/h2-console/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "$API_V1/users", "$API_V1/users/**").hasRole(UserRole.ADMIN.label)
                     .requestMatchers(HttpMethod.PUT, "$API_V1/users/**").authenticated()
