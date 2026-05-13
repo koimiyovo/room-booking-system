@@ -22,6 +22,6 @@ RUN mvn clean package -DskipTests
 # Stage 2: Runtime
 FROM eclipse-temurin:19-jre AS runtime
 WORKDIR /app
-COPY --from=builder /app/bootstrap/target/bootstrap-1.0-SNAPSHOT.jar app.jar
+COPY --from=builder /app/bootstrap/target/bootstrap-*.jar app.jar
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
