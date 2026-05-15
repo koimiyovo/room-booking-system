@@ -11,9 +11,7 @@ import com.kyovo.domain.port.secondary.*
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
+import org.mockito.kotlin.*
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.util.*
@@ -24,20 +22,23 @@ class BookingServiceTest
     private val roomRepository: RoomRepository = mock()
     private val userRepository: UserRepository = mock()
     private val clockPort: ClockPort = mock()
+    private val notificationPort: NotificationPort = mock()
     private val transactionPort = object : TransactionPort
     {
         override fun <T> executeInTransaction(block: () -> T): T = block()
     }
     private val bookingService =
-        BookingService(bookingRepository, roomRepository, transactionPort, userRepository, clockPort)
+        BookingService(bookingRepository, roomRepository, transactionPort, userRepository, clockPort, notificationPort)
 
     private val now = OffsetDateTime.now()
 
     private val roomId = RoomId(UUID.randomUUID())
     private val userId = UserId(UUID.randomUUID())
     private val creatorId = UserId(UUID.fromString("aa000000-0000-0000-0000-000000000001"))
-    private val room = Room(roomId, RoomName("Conference Room"), RoomCapacity(10), requiresValidation = false, createdBy = creatorId)
-    private val roomWithValidation = Room(roomId, RoomName("Board Room"), RoomCapacity(10), requiresValidation = true, createdBy = creatorId)
+    private val room =
+        Room(roomId, RoomName("Conference Room"), RoomCapacity(10), requiresValidation = false, createdBy = creatorId)
+    private val roomWithValidation =
+        Room(roomId, RoomName("Board Room"), RoomCapacity(10), requiresValidation = true, createdBy = creatorId)
     private val startDate = BookingStartDate(LocalDate.of(2026, 6, 1))
     private val endDate = BookingEndDate(LocalDate.of(2026, 6, 3))
     private val newBooking = NewBooking(roomId, userId, startDate, endDate, BookingNumberOfPeople(5), null)
@@ -362,7 +363,9 @@ class BookingServiceTest
         val booking = pendingBooking(bookingId)
         whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
         whenever(bookingRepository.update(any())).thenAnswer { it.getArgument<Booking>(0) }
-        whenever(bookingRepository.findOverlappingPendingBookings(roomId, startDate, endDate, bookingId)).thenReturn(emptyList())
+        whenever(bookingRepository.findOverlappingPendingBookings(roomId, startDate, endDate, bookingId)).thenReturn(
+            emptyList()
+        )
 
         val result = bookingService.validate(bookingId, adminId)
 
@@ -419,12 +422,86 @@ class BookingServiceTest
 
         bookingService.validate(bookingId, adminId)
 
-        org.mockito.kotlin.verify(bookingRepository).saveStatusHistory(
-            org.mockito.kotlin.eq(conflictingId),
-            org.mockito.kotlin.eq(BookingStatus.CANCELED),
+        verify(bookingRepository).saveStatusHistory(
+            eq(conflictingId),
+            eq(BookingStatus.CANCELED),
             any(),
-            org.mockito.kotlin.isNull(),
+            isNull(),
             any()
+        )
+    }
+
+    @Test
+    fun `cancel sends CANCELED notification to booking owner email`()
+    {
+        whenever(clockPort.now()).thenReturn(now)
+        val bookingId = BookingId(UUID.randomUUID())
+        val booking = confirmedBooking(bookingId)
+        whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
+        whenever(bookingRepository.update(any())).thenAnswer { it.getArgument<Booking>(0) }
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
+
+        bookingService.cancel(bookingId, userId, false, null)
+
+        verify(notificationPort).sendBookingStatusNotification(
+            eq(activeUser.email),
+            argThat { b: Booking -> b.status == BookingStatus.CANCELED }
+        )
+    }
+
+    @Test
+    fun `create sends CONFIRMED notification to user email when room does not require validation`()
+    {
+        whenever(clockPort.now()).thenReturn(now)
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
+        whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(room)
+        whenever(bookingRepository.existsOverlappingBooking(roomId, startDate, endDate)).thenReturn(false)
+        whenever(bookingRepository.save(any())).thenAnswer { it.getArgument<Booking>(0) }
+
+        bookingService.create(newBooking)
+
+        verify(notificationPort).sendBookingStatusNotification(
+            eq(activeUser.email),
+            argThat { b: Booking -> b.status == BookingStatus.CONFIRMED }
+        )
+    }
+
+    @Test
+    fun `create sends PENDING notification to user email when room requires validation`()
+    {
+        whenever(clockPort.now()).thenReturn(now)
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
+        whenever(roomRepository.findByIdForBooking(roomId)).thenReturn(roomWithValidation)
+        whenever(bookingRepository.existsOverlappingBooking(roomId, startDate, endDate)).thenReturn(false)
+        whenever(bookingRepository.save(any())).thenAnswer { it.getArgument<Booking>(0) }
+
+        bookingService.create(newBooking)
+
+        verify(notificationPort).sendBookingStatusNotification(
+            eq(activeUser.email),
+            argThat { b: Booking -> b.status == BookingStatus.PENDING }
+        )
+    }
+
+    @Test
+    fun `validate sends CONFIRMED notification to user email after booking is validated`()
+    {
+        whenever(clockPort.now()).thenReturn(now)
+        val adminId = UserId(UUID.randomUUID())
+        val bookingId = BookingId(UUID.randomUUID())
+        val booking = pendingBooking(bookingId)
+        whenever(bookingRepository.findById(bookingId)).thenReturn(booking)
+        whenever(bookingRepository.update(any())).thenAnswer { it.getArgument<Booking>(0) }
+        whenever(bookingRepository.findOverlappingPendingBookings(roomId, startDate, endDate, bookingId)).thenReturn(
+            emptyList()
+        )
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
+
+        bookingService.validate(bookingId, adminId)
+
+        verify(notificationPort).sendBookingStatusNotification(
+            eq(activeUser.email),
+            argThat { b: Booking -> b.status == BookingStatus.CONFIRMED }
         )
     }
 }
