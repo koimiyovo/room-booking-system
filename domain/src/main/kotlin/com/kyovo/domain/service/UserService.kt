@@ -7,16 +7,17 @@ import com.kyovo.domain.exception.UserNotFoundException
 import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.primary.UserUseCase
 import com.kyovo.domain.port.secondary.ClockPort
+import com.kyovo.domain.port.secondary.NotificationPort
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.TransactionPort
 import com.kyovo.domain.port.secondary.UserRepository
-
 
 class UserService(
     private val userRepository: UserRepository,
     private val passwordHashPort: PasswordHashPort,
     private val transactionPort: TransactionPort,
-    private val clockPort: ClockPort
+    private val clockPort: ClockPort,
+    private val notificationPort: NotificationPort
 ) : UserUseCase
 {
     override fun findAll(): List<User>
@@ -41,13 +42,16 @@ class UserService(
             email = data.email ?: user.email,
             password = data.password?.let { passwordHashPort.hash(it.value) } ?: user.password
         )
-        return userRepository.save(updated)
+        val saved = userRepository.save(updated)
+        notificationPort.sendUserProfileUpdatedNotification(saved.email)
+        return saved
     }
 
     override fun delete(id: UserId, reason: UserStatusReason?)
     {
         val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
         persistTransition(user, UserStatus.DELETED, reason)
+        notificationPort.sendUserStatusNotification(user.email, UserStatus.DELETED)
     }
 
     override fun validate(id: UserId, isAdmin: Boolean, validateBy: UserId, reason: UserStatusReason?): User
@@ -65,7 +69,9 @@ class UserService(
     override fun deactivate(id: UserId, reason: UserStatusReason?): User
     {
         val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
-        return persistTransition(user, UserStatus.INACTIVE, reason)
+        val saved = persistTransition(user, UserStatus.INACTIVE, reason)
+        notificationPort.sendUserStatusNotification(user.email, UserStatus.INACTIVE)
+        return saved
     }
 
     override fun reactivate(id: UserId, reason: UserStatusReason?): User
@@ -73,7 +79,9 @@ class UserService(
         val user = userRepository.findById(id) ?: throw UserNotFoundException(id)
         if (user.statusInfo.status != UserStatus.INACTIVE)
             throw InvalidStatusTransitionException(user.statusInfo.status, UserStatus.ACTIVE)
-        return persistTransition(user, UserStatus.ACTIVE, reason)
+        val saved = persistTransition(user, UserStatus.ACTIVE, reason)
+        notificationPort.sendUserStatusNotification(user.email, UserStatus.ACTIVE)
+        return saved
     }
 
     private fun persistTransition(user: User, target: UserStatus, reason: UserStatusReason?): User

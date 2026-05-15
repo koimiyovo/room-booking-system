@@ -28,10 +28,11 @@ class AppConfig
     fun authUseCase(
         userRepository: UserRepository,
         passwordHashPort: PasswordHashPort,
-        clockPort: ClockPort
+        clockPort: ClockPort,
+        notificationPort: NotificationPort
     ): AuthService
     {
-        return AuthService(userRepository, passwordHashPort, clockPort)
+        return AuthService(userRepository, passwordHashPort, clockPort, notificationPort)
     }
 
     @Bean
@@ -39,10 +40,11 @@ class AppConfig
         userRepository: UserRepository,
         passwordHashPort: PasswordHashPort,
         transactionPort: TransactionPort,
-        clockPort: ClockPort
+        clockPort: ClockPort,
+        notificationPort: NotificationPort
     ): UserService
     {
-        return UserService(userRepository, passwordHashPort, transactionPort, clockPort)
+        return UserService(userRepository, passwordHashPort, transactionPort, clockPort, notificationPort)
     }
 
     @Bean
