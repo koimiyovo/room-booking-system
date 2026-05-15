@@ -6,6 +6,7 @@ import com.kyovo.domain.exception.InvalidStatusTransitionException
 import com.kyovo.domain.exception.UserNotFoundException
 import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.secondary.ClockPort
+import com.kyovo.domain.port.secondary.NotificationPort
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.TransactionPort
 import com.kyovo.domain.port.secondary.UserRepository
@@ -23,7 +24,8 @@ class UserServiceTest
     private val passwordHashPort: PasswordHashPort = mock()
     private val transactionPort: TransactionPort = mock()
     private val clockPort: ClockPort = mock()
-    private val userService = UserService(userRepository, passwordHashPort, transactionPort, clockPort)
+    private val notificationPort: NotificationPort = mock()
+    private val userService = UserService(userRepository, passwordHashPort, transactionPort, clockPort, notificationPort)
 
     private val userId = UserId(UUID.randomUUID())
     private val existingUser = User(
@@ -127,6 +129,20 @@ class UserServiceTest
     }
 
     @Test
+    fun `update sends profile updated notification to updated email`()
+    {
+        val data = UpdateUser(UserName("New Name"), UserEmail("new@example.com"), null)
+        val newEmail = UserEmail("new@example.com")
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
+        whenever(userRepository.findByEmail(newEmail)).thenReturn(null)
+        whenever(userRepository.save(any())).thenAnswer { it.getArgument<User>(0) }
+
+        userService.update(userId, data)
+
+        verify(notificationPort).sendUserProfileUpdatedNotification(newEmail)
+    }
+
+    @Test
     fun `delete transitions the user to DELETED when it exists`()
     {
         val deletedUser = existingUser.copy(
@@ -161,6 +177,20 @@ class UserServiceTest
 
         assertThatThrownBy { userService.delete(userId, null) }
             .isInstanceOf(UserNotFoundException::class.java)
+    }
+
+    @Test
+    fun `delete sends DELETED notification to user email`()
+    {
+        val deletedUser = existingUser.copy(
+            statusInfo = UserStatusInfo(status = UserStatus.DELETED, since = UserStatusInfoDate(OffsetDateTime.now()), reason = null)
+        )
+        whenever(userRepository.findById(userId)).thenReturn(existingUser)
+        whenever(userRepository.update(any())).thenReturn(deletedUser)
+
+        userService.delete(userId, null)
+
+        verify(notificationPort).sendUserStatusNotification(existingUser.email, UserStatus.DELETED)
     }
 
     @Test
@@ -254,6 +284,17 @@ class UserServiceTest
     }
 
     @Test
+    fun `deactivate sends INACTIVE notification to user email`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(activeUser)
+        whenever(userRepository.update(any())).thenReturn(inactiveUser)
+
+        userService.deactivate(userId, null)
+
+        verify(notificationPort).sendUserStatusNotification(activeUser.email, UserStatus.INACTIVE)
+    }
+
+    @Test
     fun `reactivate changes the user status to ACTIVE when account is inactive`()
     {
         whenever(userRepository.findById(userId)).thenReturn(inactiveUser)
@@ -291,5 +332,16 @@ class UserServiceTest
 
         assertThatThrownBy { userService.reactivate(userId, null) }
             .isInstanceOf(InvalidStatusTransitionException::class.java)
+    }
+
+    @Test
+    fun `reactivate sends ACTIVE notification to user email`()
+    {
+        whenever(userRepository.findById(userId)).thenReturn(inactiveUser)
+        whenever(userRepository.update(any())).thenReturn(activeUser)
+
+        userService.reactivate(userId, null)
+
+        verify(notificationPort).sendUserStatusNotification(inactiveUser.email, UserStatus.ACTIVE)
     }
 }

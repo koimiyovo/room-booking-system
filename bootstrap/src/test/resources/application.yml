@@ -3,6 +3,9 @@ spring:
     property-naming-strategy: SNAKE_CASE
   jpa:
     show-sql: false
+  mail:
+    host: localhost
+    port: 1025
 
 springdoc:
   swagger-ui:
@@ -14,3 +17,5 @@ app:
   jwt:
     secret: dGhpcy1pcy1hLXNlY3JldC1rZXktZm9yLWp3dC10b2tlbi1nZW5lcmF0aW9u
     expiration-ms: 86400000
+  mail:
+    from: test@example.com

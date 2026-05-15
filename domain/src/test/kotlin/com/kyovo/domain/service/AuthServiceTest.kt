@@ -4,6 +4,7 @@ import com.kyovo.domain.exception.EmailAlreadyUsedException
 import com.kyovo.domain.exception.InvalidCredentialsException
 import com.kyovo.domain.model.user.*
 import com.kyovo.domain.port.secondary.ClockPort
+import com.kyovo.domain.port.secondary.NotificationPort
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.UserRepository
 import org.assertj.core.api.Assertions.assertThat
@@ -19,6 +20,7 @@ class AuthServiceTest
 {
     private val userRepository: UserRepository = mock()
     private val passwordHashPort: PasswordHashPort = mock()
+    private val notificationPort: NotificationPort = mock()
     private val clockPort = object : ClockPort
     {
         override fun now(): OffsetDateTime
@@ -26,7 +28,7 @@ class AuthServiceTest
             return OffsetDateTime.of(LocalDateTime.of(2026, 4, 1, 0, 0), ZoneOffset.UTC)
         }
     }
-    private val authService = AuthService(userRepository, passwordHashPort, clockPort)
+    private val authService = AuthService(userRepository, passwordHashPort, clockPort, notificationPort)
 
     private val userId = UserId(UUID.randomUUID())
     private val existingUser = User(
@@ -77,6 +79,19 @@ class AuthServiceTest
 
         assertThatThrownBy { authService.register(newUser) }
             .isInstanceOf(EmailAlreadyUsedException::class.java)
+    }
+
+    @Test
+    fun `register sends CREATED notification to user email`()
+    {
+        val newUser = NewUser(UserName("Alice"), UserEmail("alice@example.com"), UserPassword("plain"))
+        whenever(userRepository.findByEmail(newUser.email)).thenReturn(null)
+        whenever(passwordHashPort.hash("plain")).thenReturn(UserPassword("hashed"))
+        whenever(userRepository.save(any())).thenReturn(existingUser)
+
+        authService.register(newUser)
+
+        verify(notificationPort).sendUserStatusNotification(existingUser.email, UserStatus.CREATED)
     }
 
     @Test

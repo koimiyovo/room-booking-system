@@ -11,6 +11,7 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 - JWT authentication with token blacklisting on logout
 - Deleted users' JWTs are immediately rejected with 401
 - Pessimistic locking to prevent double-bookings under concurrent requests
+- Email notifications for booking events (created, confirmed, cancelled) and user lifecycle events (registered, deactivated, reactivated, deleted, profile updated)
 - OpenAPI documentation via Swagger UI
 
 ## Tech stack
@@ -42,7 +43,7 @@ bootstrap ──────────────► infrastructure-api + inf
 | `domain` | Pure business logic — no framework dependencies |
 | `infrastructure-api` | REST controllers, DTOs, JWT security stack |
 | `infrastructure-persistence` | JPA entities, Spring Data repositories |
-| `infrastructure-provider` | `SystemTimeProvider` — implements `ClockPort` |
+| `infrastructure-provider` | `SystemTimeProvider` (implements `ClockPort`) + `EmailNotificationAdapter` (implements `NotificationPort` via Spring Mail) |
 | `bootstrap` | Composition root — wires everything via `AppConfig` |
 
 ## Prerequisites
@@ -110,6 +111,39 @@ make help        # list all available commands
 The application starts on `http://localhost:8080`. Flyway applies pending migrations automatically on startup.
 
 `DataInitializer` (seed data) only runs when the `dev` profile is active (`run-dev` / `docker-up-dev`).
+
+## Email notifications
+
+The application sends transactional emails on booking events (created, confirmed, cancelled) and user lifecycle events (registered, deactivated, reactivated, deleted, profile updated).
+
+### Local development (Mailpit)
+
+[Mailpit](https://github.com/axllent/mailpit) is included in `docker-compose.yml` as a local SMTP server that catches all outgoing emails without actually sending them.
+
+- SMTP: `localhost:1025`
+- Web UI (inbox): `http://localhost:8025`
+
+When running with Docker Compose (`docker-up` / `docker-up-dev`), the app container connects to Mailpit automatically — no extra configuration needed.
+
+When running locally with Maven (`run-dev`), the `dev` Spring profile activates `application-dev.yml`, which points to `localhost:1025`. Start Mailpit first:
+
+```bash
+docker compose up mailpit -d
+```
+
+### Production
+
+Set the following environment variables:
+
+| Variable | Description |
+|---|---|
+| `MAIL_HOST` | SMTP server hostname |
+| `MAIL_PORT` | SMTP server port |
+| `MAIL_FROM` | Sender address (`noreply@...`) |
+| `MAIL_USERNAME` | SMTP username (leave empty if not required) |
+| `MAIL_PASSWORD` | SMTP password (leave empty if not required) |
+
+The application fails to start if `MAIL_HOST`, `MAIL_PORT`, or `MAIL_FROM` are not set and no active profile provides a default.
 
 ## Versioning
 

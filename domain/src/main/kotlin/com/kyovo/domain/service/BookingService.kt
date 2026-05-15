@@ -11,7 +11,8 @@ class BookingService(
     private val roomRepository: RoomRepository,
     private val transactionPort: TransactionPort,
     private val userRepository: UserRepository,
-    private val clockPort: ClockPort
+    private val clockPort: ClockPort,
+    private val notificationPort: NotificationPort
 ) : BookingUseCase
 {
     override fun findAll(): List<Booking>
@@ -31,7 +32,7 @@ class BookingService(
 
     override fun create(newBooking: NewBooking): Booking
     {
-        return transactionPort.executeInTransaction {
+        val (booking, userEmail) = transactionPort.executeInTransaction {
             val user = userRepository.findById(newBooking.userId) ?: throw UserNotFoundException(newBooking.userId)
             if (user.isInactive()) throw AccountInactiveException()
 
@@ -49,8 +50,10 @@ class BookingService(
             val statusInfo = BookingStatusInfo(initialStatus, BookingStatusInfoDate(now), changedBy = null, reason = null)
             val booking = bookingRepository.save(newBooking.toBooking(statusInfo))
             bookingRepository.saveStatusHistory(booking.id, initialStatus, BookingStatusHistoryDate(now), newBooking.userId, null)
-            booking
+            booking to user.email
         }
+        notificationPort.sendBookingStatusNotification(userEmail, booking)
+        return booking
     }
 
     override fun cancel(
@@ -60,7 +63,7 @@ class BookingService(
         reason: BookingStatusReason?
     ): Booking
     {
-        return transactionPort.executeInTransaction {
+        val saved = transactionPort.executeInTransaction {
             val booking = bookingRepository.findById(bookingId) ?: throw BookingNotFoundException(bookingId)
             if (!isAdmin && booking.userId != cancelledBy)
                 throw BookingNotOwnedByUserException(bookingId, cancelledBy)
@@ -77,6 +80,10 @@ class BookingService(
             )
             saved
         }
+        userRepository.findById(saved.userId)?.let {
+            notificationPort.sendBookingStatusNotification(it.email, saved)
+        }
+        return saved
     }
 
     override fun findStatusHistory(bookingId: BookingId): List<BookingStatusHistory>
@@ -87,7 +94,7 @@ class BookingService(
 
     override fun validate(bookingId: BookingId, adminId: UserId): Booking
     {
-        return transactionPort.executeInTransaction {
+        val saved = transactionPort.executeInTransaction {
             val booking = bookingRepository.findById(bookingId) ?: throw BookingNotFoundException(bookingId)
             if (booking.status != BookingStatus.PENDING) throw BookingNotPendingException(bookingId)
             val now = clockPort.now()
@@ -106,5 +113,9 @@ class BookingService(
                 }
             saved
         }
+        userRepository.findById(saved.userId)?.let {
+            notificationPort.sendBookingStatusNotification(it.email, saved)
+        }
+        return saved
     }
 }

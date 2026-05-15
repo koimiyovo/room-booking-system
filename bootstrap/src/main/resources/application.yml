@@ -13,6 +13,11 @@ spring:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
   flyway:
     enabled: true
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
 
 springdoc:
   swagger-ui:
@@ -21,6 +26,8 @@ springdoc:
     path: /v3/api-docs
 
 app:
+  mail:
+    from: ${MAIL_FROM}
   jwt:
     secret: dGhpcy1pcy1hLXNlY3JldC1rZXktZm9yLWp3dC10b2tlbi1nZW5lcmF0aW9u
     expiration-ms: 86400000

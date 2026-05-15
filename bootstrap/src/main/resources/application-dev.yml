@@ -1,0 +1,8 @@
+spring:
+  mail:
+    host: localhost
+    port: 1025
+
+app:
+  mail:
+    from: noreply@room-booking.com

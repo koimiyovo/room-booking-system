@@ -8,13 +8,15 @@ import com.kyovo.domain.model.user.UserEmail
 import com.kyovo.domain.model.user.UserRegistrationDate
 import com.kyovo.domain.port.primary.AuthUseCase
 import com.kyovo.domain.port.secondary.ClockPort
+import com.kyovo.domain.port.secondary.NotificationPort
 import com.kyovo.domain.port.secondary.PasswordHashPort
 import com.kyovo.domain.port.secondary.UserRepository
 
 class AuthService(
     private val userRepository: UserRepository,
     private val passwordHashPort: PasswordHashPort,
-    private val clockPort: ClockPort
+    private val clockPort: ClockPort,
+    private val notificationPort: NotificationPort
 ) : AuthUseCase
 {
     override fun register(newUser: NewUser): User
@@ -23,6 +25,7 @@ class AuthService(
         val hashed = newUser.copy(password = passwordHashPort.hash(newUser.password.value))
         val user = userRepository.save(hashed.toUser(UserRegistrationDate(clockPort.now())))
         userRepository.saveStatusHistory(user.id, user.statusInfo.status, user.statusInfo.since, null)
+        notificationPort.sendUserStatusNotification(user.email, user.statusInfo.status)
         return user
     }
 
