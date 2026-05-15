@@ -15,6 +15,12 @@ services:
       timeout: 5s
       retries: 5
 
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   app:
     build: .
     image: room-booking-system:${APP_VERSION:-latest}
@@ -25,9 +31,14 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgres
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM: noreply@room-booking.com
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
 volumes:
   postgres_data:
