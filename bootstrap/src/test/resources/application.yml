@@ -1,6 +1,9 @@
 spring:
   jackson:
     property-naming-strategy: SNAKE_CASE
+  datasource:
+    username: test
+    password: test
   jpa:
     show-sql: false
   mail:
