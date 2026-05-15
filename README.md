@@ -59,6 +59,25 @@ git clone https://github.com/koimiyovo/room-booking-system.git
 cd room-booking-system
 ```
 
+### Environment variables
+
+Copy `.env.example` to `.env` and fill in the values before running anything:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Description |
+|---|---|
+| `POSTGRES_USER` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `JWT_SECRET` | Base64-encoded secret key for signing JWT tokens |
+| `MAIL_HOST` | SMTP server hostname |
+| `MAIL_PORT` | SMTP server port |
+| `MAIL_FROM` | Sender address for outgoing emails |
+
+Docker Compose reads `.env` automatically. For local Maven runs, export the variables in your shell or use a tool like `direnv`.
+
 ### With Docker (recommended)
 
 No local JDK or PostgreSQL needed — everything runs in containers.
@@ -66,7 +85,7 @@ No local JDK or PostgreSQL needed — everything runs in containers.
 **Linux / macOS:**
 
 ```bash
-make docker-up        # build image and start app + Postgres
+make docker-up        # build image and start app + Postgres + Mailpit
 make docker-up-dev    # same, with dev profile (seeds sample data)
 make docker-down      # stop and remove containers
 make docker-down-v    # stop and remove containers + Postgres volume
@@ -77,7 +96,7 @@ make docker-build     # build the image without starting
 **Windows:**
 
 ```powershell
-.\scripts.ps1 docker-up        # build image and start app + Postgres
+.\scripts.ps1 docker-up        # build image and start app + Postgres + Mailpit
 .\scripts.ps1 docker-up-dev    # same, with dev profile (seeds sample data)
 .\scripts.ps1 docker-down      # stop and remove containers
 .\scripts.ps1 docker-down-v    # stop and remove containers + Postgres volume
@@ -87,7 +106,7 @@ make docker-build     # build the image without starting
 
 ### Without Docker (local Maven)
 
-Requires a running PostgreSQL instance on `localhost:5432` (database `room_booking`, user/password `postgres`).
+Requires a running PostgreSQL instance on `localhost:5432` and the environment variables above set in your shell.
 
 **Linux / macOS:**
 
@@ -133,17 +152,7 @@ docker compose up mailpit -d
 
 ### Production
 
-Set the following environment variables:
-
-| Variable | Description |
-|---|---|
-| `MAIL_HOST` | SMTP server hostname |
-| `MAIL_PORT` | SMTP server port |
-| `MAIL_FROM` | Sender address (`noreply@...`) |
-| `MAIL_USERNAME` | SMTP username (leave empty if not required) |
-| `MAIL_PASSWORD` | SMTP password (leave empty if not required) |
-
-The application fails to start if `MAIL_HOST`, `MAIL_PORT`, or `MAIL_FROM` are not set and no active profile provides a default.
+Set `MAIL_HOST`, `MAIL_PORT`, and `MAIL_FROM` via environment variables (see the [Environment variables](#environment-variables) section). The application fails to start if any of these are missing. `MAIL_USERNAME` and `MAIL_PASSWORD` default to empty — only set them if your SMTP server requires authentication.
 
 ## Versioning
 
