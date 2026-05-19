@@ -1,39 +1,39 @@
 export type UserRoleDto = 'ADMIN' | 'USER'
 export type UserStatusDto = 'CREATED' | 'ACTIVE' | 'INACTIVE' | 'DELETED'
 
-export interface UserStatusInfoDto {
-  status: UserStatusDto
-  since: string
-  reason: string | null
+export type UserStatusInfoDto = {
+    status: UserStatusDto
+    since: string
+    reason: string | null
 }
 
-export interface UserDto {
-  id: string
-  name: string
-  email: string
-  role: UserRoleDto
-  registered_at: string
-  status_info: UserStatusInfoDto
+export type UserDto = {
+    id: string
+    name: string
+    email: string
+    role: UserRoleDto
+    registered_at: string
+    status_info: UserStatusInfoDto
 }
 
-export interface LoginRequestDto {
-  email: string
-  password: string
+export type LoginRequestDto = {
+    email: string
+    password: string
 }
 
-export interface LoginResponseDto {
-  token: string
+export type LoginResponseDto = {
+    token: string
 }
 
-export interface RegisterRequestDto {
-  name: string
-  email: string
-  password: string
+export type RegisterRequestDto = {
+    name: string
+    email: string
+    password: string
 }
 
-export interface RegisterResponseDto {
-  id: string
-  name: string
-  email: string
-  registered_at: string
+export type RegisterResponseDto = {
+    id: string
+    name: string
+    email: string
+    registered_at: string
 }
