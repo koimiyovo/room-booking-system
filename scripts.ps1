@@ -53,12 +53,26 @@ function Invoke-Release {
     Write-Host "Released v$NewVersion -- push when ready: git push; git push --tags"
 }
 
+function Import-EnvFile {
+    param([string]$Path)
+    if (Test-Path $Path) {
+        Get-Content $Path | ForEach-Object {
+            if ($_ -match '^\s*([^#][^=]*)\s*=\s*(.*)\s*$') {
+                [System.Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim(), 'Process')
+            }
+        }
+    }
+}
+
 switch ($Command) {
 
     # -- Maven -------------------------------------------------------------------
 
     "run"     { mvn install -DskipTests; if ($?) { mvn spring-boot:run -pl bootstrap } }
-    "run-dev" { mvn install -DskipTests; if ($?) { mvn spring-boot:run -pl bootstrap "-Dspring.profiles.active=dev" } }
+    "run-dev" {
+        Import-EnvFile ".env.dev"
+        mvn install -DskipTests; if ($?) { mvn spring-boot:run -pl bootstrap "-Dspring-boot.run.profiles=dev" }
+    }
     "stop"    {
         $conn = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
         if ($conn) {
@@ -80,9 +94,10 @@ switch ($Command) {
     # -- Full stack --------------------------------------------------------------
 
     "dev" {
+        Import-EnvFile ".env.dev"
         $root = $PSScriptRoot
         Start-Process powershell -ArgumentList '-NoExit', '-Command', `
-            "Set-Location '$root'; mvn install -DskipTests; if (`$?) { mvn spring-boot:run -pl bootstrap '-Dspring.profiles.active=dev' }"
+            "Set-Location '$root'; mvn install -DskipTests; if (`$?) { mvn spring-boot:run -pl bootstrap '-Dspring-boot.run.profiles=dev' }"
         Push-Location frontend
         try { npm run dev } finally { Pop-Location }
     }

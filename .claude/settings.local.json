@@ -77,7 +77,8 @@
       "Bash(npm test *)",
       "Bash(npm run *)",
       "Bash(docker compose *)",
-      "Bash(dir bootstrapsrcmainresources *)"
+      "Bash(dir bootstrapsrcmainresources *)",
+      "PowerShell(.\\\\scripts.ps1 stop)"
     ]
   }
 }

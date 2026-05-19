@@ -42,7 +42,7 @@ run:
 	mvn install -DskipTests && mvn spring-boot:run -pl bootstrap
 
 run-dev:
-	mvn install -DskipTests && mvn spring-boot:run -pl bootstrap -Dspring.profiles.active=dev
+	set -a && . ./.env.dev && set +a && mvn install -DskipTests && mvn spring-boot:run -pl bootstrap -Dspring-boot.run.profiles=dev
 
 stop:
 	@-pkill -f "spring-boot" 2>/dev/null || true
@@ -68,7 +68,7 @@ fe-build:
 
 dev:
 	@trap 'kill 0' INT; \
-	(mvn install -DskipTests && mvn spring-boot:run -pl bootstrap -Dspring.profiles.active=dev) & \
+	(set -a && . ./.env.dev && set +a && mvn install -DskipTests && mvn spring-boot:run -pl bootstrap -Dspring-boot.run.profiles=dev) & \
 	(cd frontend && npm run dev) & \
 	wait
 
