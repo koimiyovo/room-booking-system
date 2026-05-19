@@ -1,6 +1,6 @@
 # Room Booking System
 
-A REST API for managing room bookings, built with Kotlin and Spring Boot following hexagonal architecture (ports & adapters).
+A room booking application built with hexagonal architecture (ports & adapters) on both the backend (Kotlin / Spring Boot REST API) and the frontend (React / TypeScript SPA).
 
 ## Features
 
@@ -16,6 +16,7 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 
 ## Tech stack
 
+### Backend
 - **Kotlin** 2.3 / **Java** 19
 - **Spring Boot** 4.0
 - **Spring Security** 7 — stateless JWT
@@ -26,9 +27,18 @@ A REST API for managing room bookings, built with Kotlin and Spring Boot followi
 - **ArchUnit** 1.4 — architecture rules enforced as tests
 - **Maven** multi-module build
 
+### Frontend
+- **React** 19 / **TypeScript** 6 — Vite 8 dev server
+- **React Router** 7 — client-side routing with protected routes
+- **TanStack Query** 5 — server state management
+- **shadcn/ui** + **Tailwind CSS** 4 — component library and utility CSS
+- **Vitest** 4 + **Testing Library** + **MSW** 2 — unit, hook, and UI tests
+
 ## Architecture
 
-Hexagonal architecture with five Maven modules. Dependency flow is strictly one-way:
+Both layers follow hexagonal architecture (ports & adapters). Domain logic has zero framework dependencies; adapters live at the edges.
+
+### Backend — five Maven modules
 
 ```
 infrastructure-api ──────┐
@@ -46,10 +56,32 @@ bootstrap ──────────────► infrastructure-api + inf
 | `infrastructure-provider` | `SystemTimeProvider` (implements `ClockPort`) + `EmailNotificationAdapter` (implements `NotificationPort` via Spring Mail) |
 | `bootstrap` | Composition root — wires everything via `AppConfig` |
 
+### Frontend — `frontend/` (React SPA)
+
+```
+ui/ (React components, hooks, pages)
+  └──► domain/ (services, use cases)
+         └──► infrastructure/ (API adapters, token storage)
+```
+
+| Layer | Role |
+|---|---|
+| `domain/model/` | TypeScript interfaces — `Room`, `Booking`, `User` |
+| `domain/port/primary/` | Use case interfaces — `RoomUseCase`, `BookingUseCase`, `AuthUseCase` |
+| `domain/port/secondary/` | Repository interfaces implemented by adapters |
+| `domain/service/` | Pure TypeScript services — delegate to repository ports |
+| `infrastructure/api/` | HTTP adapters (fetch + MSW-testable), snake_case → camelCase mapping |
+| `infrastructure/auth/` | `TokenStorage` — JWT in localStorage |
+| `ui/context/` | `AuthContext` — current user + token (Context API) |
+| `ui/hooks/` | TanStack Query hooks — bridge between use cases and React |
+| `ui/pages/` | Login, Register, Rooms, Bookings, Users (admin) |
+| `ui/components/` | Layout (Navbar, PrivateRoute, AdminRoute) + domain components |
+
 ## Prerequisites
 
 - JDK 19
 - Maven 3.9+
+- Node.js 20+ / npm
 - Docker (required for running via Docker Compose and for integration tests)
 
 ## Getting started
@@ -78,42 +110,50 @@ cp .env.example .env
 
 Docker Compose reads `.env` automatically. For local Maven runs, export the variables in your shell or use a tool like `direnv`.
 
-### With Docker (recommended)
+### With Docker — full stack (recommended)
 
-No local JDK or PostgreSQL needed — everything runs in containers.
+Builds and starts everything in containers: PostgreSQL, Mailpit, Spring Boot backend, and the React frontend served by Nginx.
+
+| URL | Service |
+|---|---|
+| `http://localhost` | Frontend (Nginx → React SPA) |
+| `http://localhost/api/v1/...` | API (proxied by Nginx → Spring Boot) |
+| `http://localhost:8080` | Backend direct access |
+| `http://localhost:8025` | Mailpit inbox |
 
 **Linux / macOS:**
 
 ```bash
-make docker-up        # build image and start app + Postgres + Mailpit
+make docker-up        # build and start all containers (frontend + backend + db + mailpit)
 make docker-up-dev    # same, with dev profile (seeds sample data)
 make docker-down      # stop and remove containers
 make docker-down-v    # stop and remove containers + Postgres volume
 make docker-logs      # follow application logs
-make docker-build     # build the image without starting
+make docker-build     # build all images without starting
 ```
 
 **Windows:**
 
 ```powershell
-.\scripts.ps1 docker-up        # build image and start app + Postgres + Mailpit
+.\scripts.ps1 docker-up        # build and start all containers
 .\scripts.ps1 docker-up-dev    # same, with dev profile (seeds sample data)
 .\scripts.ps1 docker-down      # stop and remove containers
 .\scripts.ps1 docker-down-v    # stop and remove containers + Postgres volume
 .\scripts.ps1 docker-logs      # follow application logs
-.\scripts.ps1 docker-build     # build the image without starting
+.\scripts.ps1 docker-build     # build all images without starting
 ```
 
-### Without Docker (local Maven)
+### Without Docker — local development
 
-Requires a running PostgreSQL instance on `localhost:5432` and the environment variables above set in your shell.
+Runs backend and frontend in separate processes. No containers needed (except optionally for PostgreSQL and Mailpit).
 
 **Linux / macOS:**
 
 ```bash
-make build       # package without tests
-make run         # start (no seed data)
-make run-dev     # start with dev profile (seeds sample data on startup)
+make dev         # start backend (dev profile) + frontend together — Ctrl+C stops both
+make run         # backend only (no seed data)
+make run-dev     # backend only with dev profile
+make fe-dev      # frontend only (http://localhost:5173)
 make stop        # kill the process on port 8080
 make help        # list all available commands
 ```
@@ -121,15 +161,16 @@ make help        # list all available commands
 **Windows:**
 
 ```powershell
-.\scripts.ps1 build
+.\scripts.ps1 dev        # backend in a new window + frontend here
 .\scripts.ps1 run
 .\scripts.ps1 run-dev
+.\scripts.ps1 fe-dev
 .\scripts.ps1 stop
 ```
 
-The application starts on `http://localhost:8080`. Flyway applies pending migrations automatically on startup.
+In local dev mode, the Vite dev server runs on `http://localhost:5173` and proxies `/api` to `http://localhost:8080`. Flyway applies pending migrations automatically on startup.
 
-`DataInitializer` (seed data) only runs when the `dev` profile is active (`run-dev` / `docker-up-dev`).
+`DataInitializer` (seed data) only runs when the `dev` profile is active (`run-dev` / `make dev` / `docker-up-dev`).
 
 ## Email notifications
 
@@ -253,6 +294,8 @@ docker pull ghcr.io/koimiyovo/room-booking-system:latest
 
 ## Running tests
 
+### Backend
+
 **Docker must be running** — integration tests (`bootstrap` module) spin up a real PostgreSQL 17 container via Testcontainers. Domain unit tests and web slice tests have no external dependency.
 
 On Windows, Docker Desktop must have "Expose daemon on TCP without TLS" enabled (Settings → General).
@@ -278,6 +321,24 @@ mvn clean test -Dtest=RoomServiceTest
 ```
 
 The test suite includes domain unit tests, web slice tests (`@WebMvcTest`), integration tests (`@SpringBootTest` + real PostgreSQL via Testcontainers), and architecture rules enforced via ArchUnit.
+
+### Frontend
+
+No external dependencies — all tests run in-process with Vitest + jsdom + MSW.
+
+```bash
+cd frontend
+
+npm test           # run all tests once
+npm run test:watch # watch mode
+npm run test:ui    # Vitest UI (browser)
+```
+
+The frontend test suite covers:
+- **Domain unit tests** — pure TypeScript, no framework (`RoomService`, `BookingService`, `AuthService`)
+- **Adapter tests** — HTTP mapping with MSW mocking the API (`RoomApiAdapter`)
+- **Hook tests** — TanStack Query hooks with MSW (`useRooms`)
+- **Page tests** — React Testing Library + MSW (`LoginPage`)
 
 ## License
 

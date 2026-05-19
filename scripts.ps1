@@ -5,12 +5,20 @@ function Show-Help {
     Write-Host ""
     Write-Host "Usage: .\scripts.ps1 <command>"
     Write-Host ""
-    Write-Host "Maven:"
+    Write-Host "Maven (backend):"
     Write-Host "  run            Start the application"
     Write-Host "  run-dev        Start with dev profile (seeds sample data)"
     Write-Host "  stop           Kill the process on port 8080"
     Write-Host "  build          Package without tests"
     Write-Host "  test           Run all tests"
+    Write-Host ""
+    Write-Host "Frontend:"
+    Write-Host "  fe-dev         Start the Vite dev server (http://localhost:5173)"
+    Write-Host "  fe-test        Run frontend tests"
+    Write-Host "  fe-build       Build the frontend for production"
+    Write-Host ""
+    Write-Host "Full stack:"
+    Write-Host "  dev            Start backend (dev profile) in a new window + frontend here"
     Write-Host ""
     Write-Host "Docker:"
     Write-Host "  docker-build   Build the Docker image"
@@ -45,12 +53,26 @@ function Invoke-Release {
     Write-Host "Released v$NewVersion -- push when ready: git push; git push --tags"
 }
 
+function Import-EnvFile {
+    param([string]$Path)
+    if (Test-Path $Path) {
+        Get-Content $Path | ForEach-Object {
+            if ($_ -match '^\s*([^#][^=]*)\s*=\s*(.*)\s*$') {
+                [System.Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim(), 'Process')
+            }
+        }
+    }
+}
+
 switch ($Command) {
 
     # -- Maven -------------------------------------------------------------------
 
     "run"     { mvn install -DskipTests; if ($?) { mvn spring-boot:run -pl bootstrap } }
-    "run-dev" { mvn install -DskipTests; if ($?) { mvn spring-boot:run -pl bootstrap "-Dspring.profiles.active=dev" } }
+    "run-dev" {
+        Import-EnvFile ".env.dev"
+        mvn install -DskipTests; if ($?) { mvn spring-boot:run -pl bootstrap "-Dspring-boot.run.profiles=dev" }
+    }
     "stop"    {
         $conn = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
         if ($conn) {
@@ -62,6 +84,23 @@ switch ($Command) {
     }
     "build"   { mvn clean package "-DskipTests" }
     "test"    { mvn clean test }
+
+    # -- Frontend ----------------------------------------------------------------
+
+    "fe-dev"   { Push-Location frontend; try { npm run dev   } finally { Pop-Location } }
+    "fe-test"  { Push-Location frontend; try { npm test      } finally { Pop-Location } }
+    "fe-build" { Push-Location frontend; try { npm run build } finally { Pop-Location } }
+
+    # -- Full stack --------------------------------------------------------------
+
+    "dev" {
+        Import-EnvFile ".env.dev"
+        $root = $PSScriptRoot
+        Start-Process powershell -ArgumentList '-NoExit', '-Command', `
+            "Set-Location '$root'; mvn install -DskipTests; if (`$?) { mvn spring-boot:run -pl bootstrap '-Dspring-boot.run.profiles=dev' }"
+        Push-Location frontend
+        try { npm run dev } finally { Pop-Location }
+    }
 
     # -- Docker ------------------------------------------------------------------
 
