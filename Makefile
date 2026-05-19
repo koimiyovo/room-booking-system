@@ -1,4 +1,5 @@
 .PHONY: help run run-dev stop build test \
+        fe-dev fe-test fe-build dev \
         docker-build docker-up docker-up-dev docker-down docker-down-v docker-logs \
         release-patch release-minor release-major _release
 
@@ -6,12 +7,20 @@ VERSION := $(shell mvn help:evaluate -Dexpression=project.version -q -DforceStdo
 
 help:
 	@echo ""
-	@echo "Maven:"
+	@echo "Maven (backend):"
 	@echo "  run            Start the application"
 	@echo "  run-dev        Start with dev profile (seeds sample data)"
 	@echo "  stop           Kill the process on port 8080"
 	@echo "  build          Package without tests"
 	@echo "  test           Run all tests"
+	@echo ""
+	@echo "Frontend:"
+	@echo "  fe-dev         Start the Vite dev server (http://localhost:5173)"
+	@echo "  fe-test        Run frontend tests"
+	@echo "  fe-build       Build the frontend for production"
+	@echo ""
+	@echo "Full stack:"
+	@echo "  dev            Start backend (dev profile) + frontend together (Ctrl+C stops both)"
 	@echo ""
 	@echo "Docker:"
 	@echo "  docker-build   Build the Docker image"
@@ -43,6 +52,25 @@ build:
 
 test:
 	mvn clean test
+
+# -- Frontend ----------------------------------------------------------------
+
+fe-dev:
+	cd frontend && npm run dev
+
+fe-test:
+	cd frontend && npm test
+
+fe-build:
+	cd frontend && npm run build
+
+# -- Full stack --------------------------------------------------------------
+
+dev:
+	@trap 'kill 0' INT; \
+	(mvn install -DskipTests && mvn spring-boot:run -pl bootstrap -Dspring.profiles.active=dev) & \
+	(cd frontend && npm run dev) & \
+	wait
 
 # -- Docker ------------------------------------------------------------------
 

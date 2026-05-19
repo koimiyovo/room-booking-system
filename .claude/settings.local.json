@@ -67,7 +67,17 @@
       "Bash(curl -s http://127.0.0.1:2375/_ping)",
       "Bash(curl -s -o /dev/null -w 'HTTP %{http_code}' -H 'Host: localhost' -H 'User-Agent: docker-java/3.4.1 okhttp/4.12.0' -H 'Content-Type: application/json' -H 'Accept-Encoding: gzip' http://127.0.0.1:2375/v1.43/info)",
       "WebFetch(domain:repo.maven.apache.org)",
-      "WebFetch(domain:java.testcontainers.org)"
+      "WebFetch(domain:java.testcontainers.org)",
+      "Bash(dir C:\\\\Users\\\\bonbo\\\\IdeaProjects\\\\room-booking-system *)",
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npx *)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\bonbo\\\\IdeaProjects\\\\room-booking-system\\\\frontend\\\\src\" -Recurse -Force | ForEach-Object { $_.FullName })",
+      "Bash(npm test *)",
+      "Bash(npm run *)",
+      "Bash(docker compose *)",
+      "Bash(dir bootstrapsrcmainresources *)"
     ]
   }
 }

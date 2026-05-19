@@ -41,5 +41,14 @@ services:
       mailpit:
         condition: service_started
 
+  frontend:
+    build: ./frontend
+    image: room-booking-frontend:${APP_VERSION:-latest}
+    ports:
+      - "80:80"
+    depends_on:
+      app:
+        condition: service_started
+
 volumes:
   postgres_data:
